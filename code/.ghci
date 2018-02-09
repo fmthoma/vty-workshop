@@ -1,0 +1,5 @@
+import Graphics.Vty
+import Brick
+import Brick.Widgets.Dialog
+import Brick.Widgets.List
+:set prompt "=== %s ================================\nλ. "

@@ -1,0 +1,46 @@
+name:                vty-workshop
+version:             0.1.0.0
+github:              "fmthoma/vty-workshop"
+license:             BSD3
+author:              "Franz Thoma"
+maintainer:          "franz.thoma@tngtech.com"
+copyright:           "2017 Franz Thoma"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+synopsis:            Code examples for Vty/brick workshop
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on Github at <https://github.com/fmthoma/vty-workshop#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- async
+- brick
+- microlens
+- microlens-th
+- pipes
+- pipes-concurrency
+- transformers
+- vector
+- vty
+
+library:
+  source-dirs: src
+  ghc-options: [ -Wall ]
+
+executables:
+  vty-test:
+    main:                VtyTest.hs
+    source-dirs:         app
+    ghc-options:
+    - -Wall
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
