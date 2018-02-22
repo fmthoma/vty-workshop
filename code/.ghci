@@ -1,5 +1,8 @@
-import Graphics.Vty
 import Brick
+import Brick.Widgets.Border
+import Brick.Widgets.Center
 import Brick.Widgets.Dialog
 import Brick.Widgets.List
+import Graphics.Vty
+:set -fno-warn-type-defaults
 :set prompt "=== %s ================================\nλ. "

@@ -38,9 +38,13 @@ library:
 executables:
   vty-test:
     main:                VtyTest.hs
+  pong:
+    main:                Main.hs
     source-dirs:         app
     ghc-options:
     - -Wall
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    dependencies:
+    - vty-workshop
