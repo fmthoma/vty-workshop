@@ -1,0 +1,144 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><a name="line-2"></a><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><a name="line-3"></a><span class="hs-comment">-- | This module provides a simple dialog widget. You get to pick the</span><span>
+</span><a name="line-4"></a><span class="hs-comment">-- dialog title, if any, as well as its body and buttons.</span><span>
+</span><a name="line-5"></a><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">Widgets</span><span class="hs-operator">.</span><span class="hs-identifier">Dialog</span><span>
+</span><a name="line-6"></a><span>  </span><span class="hs-special">(</span><span> </span><a href="Brick.Widgets.Dialog.html#Dialog"><span class="hs-identifier hs-type">Dialog</span></a><span>
+</span><a name="line-7"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Dialog.html#dialogTitle"><span class="hs-identifier hs-var">dialogTitle</span></a><span>
+</span><a name="line-8"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Dialog.html#dialogButtons"><span class="hs-identifier hs-var">dialogButtons</span></a><span>
+</span><a name="line-9"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Dialog.html#dialogSelectedIndex"><span class="hs-identifier hs-var">dialogSelectedIndex</span></a><span>
+</span><a name="line-10"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Dialog.html#dialogWidth"><span class="hs-identifier hs-var">dialogWidth</span></a><span>
+</span><a name="line-11"></a><span>  </span><span class="hs-comment">-- * Construction and rendering</span><span>
+</span><a name="line-12"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Dialog.html#dialog"><span class="hs-identifier hs-var">dialog</span></a><span>
+</span><a name="line-13"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Dialog.html#renderDialog"><span class="hs-identifier hs-var">renderDialog</span></a><span>
+</span><a name="line-14"></a><span>  </span><span class="hs-comment">-- * Handling events</span><span>
+</span><a name="line-15"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Dialog.html#handleDialogEvent"><span class="hs-identifier hs-var">handleDialogEvent</span></a><span>
+</span><a name="line-16"></a><span>  </span><span class="hs-comment">-- * Getting a dialog's current value</span><span>
+</span><a name="line-17"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Dialog.html#dialogSelection"><span class="hs-identifier hs-var">dialogSelection</span></a><span>
+</span><a name="line-18"></a><span>  </span><span class="hs-comment">-- * Attributes</span><span>
+</span><a name="line-19"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Dialog.html#dialogAttr"><span class="hs-identifier hs-var">dialogAttr</span></a><span>
+</span><a name="line-20"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Dialog.html#buttonAttr"><span class="hs-identifier hs-var">buttonAttr</span></a><span>
+</span><a name="line-21"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Dialog.html#buttonSelectedAttr"><span class="hs-identifier hs-var">buttonSelectedAttr</span></a><span>
+</span><a name="line-22"></a><span>  </span><span class="hs-comment">-- * Lenses</span><span>
+</span><a name="line-23"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Dialog.html#dialogButtonsL"><span class="hs-identifier hs-var">dialogButtonsL</span></a><span>
+</span><a name="line-24"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Dialog.html#dialogSelectedIndexL"><span class="hs-identifier hs-var">dialogSelectedIndexL</span></a><span>
+</span><a name="line-25"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Dialog.html#dialogWidthL"><span class="hs-identifier hs-var">dialogWidthL</span></a><span>
+</span><a name="line-26"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Dialog.html#dialogTitleL"><span class="hs-identifier hs-var">dialogTitleL</span></a><span>
+</span><a name="line-27"></a><span>  </span><span class="hs-special">)</span><span>
+</span><a name="line-28"></a><span class="hs-keyword">where</span><span>
+</span><a name="line-29"></a><span>
+</span><a name="line-30"></a><span class="hs-cpp">#if !MIN_VERSION_base(4,8,0)</span><span>
+</span><a name="line-31"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Control</span><span class="hs-operator">.</span><span class="hs-identifier">Applicative</span><span>
+</span><a name="line-32"></a><span class="hs-cpp">#endif</span><span>
+</span><a name="line-33"></a><span>
+</span><a name="line-34"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Lens</span><span class="hs-operator">.</span><span class="hs-identifier">Micro</span><span>
+</span><a name="line-35"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data</span><span class="hs-operator">.</span><span class="hs-identifier">Monoid</span><span>
+</span><a name="line-36"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data</span><span class="hs-operator">.</span><span class="hs-identifier">List</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-var">intersperse</span><span class="hs-special">)</span><span>
+</span><a name="line-37"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Graphics</span><span class="hs-operator">.</span><span class="hs-identifier">Vty</span><span class="hs-operator">.</span><span class="hs-identifier">Input</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Event</span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Key</span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a name="line-38"></a><span>
+</span><a name="line-39"></a><span class="hs-keyword">import</span><span> </span><a href="Brick.Util.html"><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">Util</span></a><span> </span><span class="hs-special">(</span><a href="Brick.Util.html#clamp"><span class="hs-identifier hs-var">clamp</span></a><span class="hs-special">)</span><span>
+</span><a name="line-40"></a><span class="hs-keyword">import</span><span> </span><a href="Brick.Types.html"><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">Types</span></a><span>
+</span><a name="line-41"></a><span class="hs-keyword">import</span><span> </span><a href="Brick.Widgets.Core.html"><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">Widgets</span><span class="hs-operator">.</span><span class="hs-identifier">Core</span></a><span>
+</span><a name="line-42"></a><span class="hs-keyword">import</span><span> </span><a href="Brick.Widgets.Center.html"><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">Widgets</span><span class="hs-operator">.</span><span class="hs-identifier">Center</span></a><span>
+</span><a name="line-43"></a><span class="hs-keyword">import</span><span> </span><a href="Brick.Widgets.Border.html"><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">Widgets</span><span class="hs-operator">.</span><span class="hs-identifier">Border</span></a><span>
+</span><a name="line-44"></a><span class="hs-keyword">import</span><span> </span><a href="Brick.AttrMap.html"><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">AttrMap</span></a><span>
+</span><a name="line-45"></a><span>
+</span><a name="line-46"></a><span class="hs-comment">-- | Dialogs present a window with a title (optional), a body, and</span><span>
+</span><a name="line-47"></a><span class="hs-comment">-- buttons (optional). Dialog buttons are labeled with strings and map</span><span>
+</span><a name="line-48"></a><span class="hs-comment">-- to values of type 'a', which you choose.</span><span>
+</span><a name="line-49"></a><span class="hs-comment">--</span><span>
+</span><a name="line-50"></a><span class="hs-comment">-- Dialogs handle the following events by default with</span><span>
+</span><a name="line-51"></a><span class="hs-comment">-- handleDialogEvent:</span><span>
+</span><a name="line-52"></a><span class="hs-comment">--</span><span>
+</span><a name="line-53"></a><span class="hs-comment">-- * Tab or Right Arrow: select the next button</span><span>
+</span><a name="line-54"></a><span class="hs-comment">-- * Shift-tab or Left Arrow: select the previous button</span><span>
+</span><a name="line-55"></a><span class="hs-keyword">data</span><span> </span><a name="Dialog"><a href="Brick.Widgets.Dialog.html#Dialog"><span class="hs-identifier">Dialog</span></a></a><span> </span><a name="local-6989586621679301269"><a href="#local-6989586621679301269"><span class="hs-identifier">a</span></a></a><span> </span><span class="hs-glyph">=</span><span>
+</span><a name="line-56"></a><span>    </span><a name="Dialog"><a href="Brick.Widgets.Dialog.html#Dialog"><span class="hs-identifier">Dialog</span></a></a><span> </span><span class="hs-special">{</span><span> </span><a name="dialogTitle"><a href="Brick.Widgets.Dialog.html#dialogTitle"><span class="hs-identifier">dialogTitle</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Maybe</span><span> </span><span class="hs-identifier hs-type">String</span><span>
+</span><a name="line-57"></a><span>           </span><span class="hs-comment">-- ^ The dialog title</span><span>
+</span><a name="line-58"></a><span>           </span><span class="hs-special">,</span><span> </span><a name="dialogButtons"><a href="Brick.Widgets.Dialog.html#dialogButtons"><span class="hs-identifier">dialogButtons</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="hs-identifier hs-type">String</span><span class="hs-special">,</span><span> </span><a href="#local-6989586621679301269"><span class="hs-identifier hs-type">a</span></a><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><a name="line-59"></a><span>           </span><span class="hs-comment">-- ^ The dialog button labels and values</span><span>
+</span><a name="line-60"></a><span>           </span><span class="hs-special">,</span><span> </span><a name="dialogSelectedIndex"><a href="Brick.Widgets.Dialog.html#dialogSelectedIndex"><span class="hs-identifier">dialogSelectedIndex</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Maybe</span><span> </span><span class="hs-identifier hs-type">Int</span><span>
+</span><a name="line-61"></a><span>           </span><span class="hs-comment">-- ^ The currently selected dialog button index (if any)</span><span>
+</span><a name="line-62"></a><span>           </span><span class="hs-special">,</span><span> </span><a name="dialogWidth"><a href="Brick.Widgets.Dialog.html#dialogWidth"><span class="hs-identifier">dialogWidth</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Int</span><span>
+</span><a name="line-63"></a><span>           </span><span class="hs-comment">-- ^ The maximum width of the dialog</span><span>
+</span><a name="line-64"></a><span>           </span><span class="hs-special">}</span><span>
+</span><a name="line-65"></a><span>
+</span><a name="line-66"></a><span class="hs-identifier hs-var">suffixLenses</span><span> </span><span class="hs-char">''Dialog
+
+handleDialogEvent :: Event -&gt; Dialog a -&gt; EventM n (Dialog a)
+handleDialogEvent ev d =
+    return $ case ev of
+        EvKey (KChar '\t') [] -&gt; nextButtonBy 1 d
+        EvKey KBackTab [] -&gt; nextButtonBy (-1) d
+        EvKey KRight [] -&gt; nextButtonBy 1 d
+        EvKey KLeft [] -&gt; nextButtonBy (-1) d
+        _ -&gt; d
+
+-- | Create a dialog.
+dialog :: Maybe String
+       -- ^ The dialog title
+       -&gt; Maybe (Int, [(String, a)])
+       -- ^ The currently-selected button index (starting at zero) and
+       -- the button labels and values to use
+       -&gt; Int
+       -- ^ The maximum width of the dialog
+       -&gt; Dialog a
+dialog title buttonData w =
+    let (buttons, idx) = case buttonData of
+          Nothing -&gt; ([], Nothing)
+          Just (_, []) -&gt; ([], Nothing)
+          Just (i, bs) -&gt; (bs, Just $ clamp 0 (length bs - 1) i)
+    in Dialog title buttons idx w
+
+-- | The default attribute of the dialog
+dialogAttr :: AttrName
+dialogAttr = &quot;dialog&quot;
+
+-- | The default attribute for all dialog buttons
+buttonAttr :: AttrName
+buttonAttr = &quot;button&quot;
+
+-- | The attribute for the selected dialog button (extends 'dialogAttr')
+buttonSelectedAttr :: AttrName
+buttonSelectedAttr = buttonAttr &lt;&gt; &quot;selected&quot;
+
+-- | Render a dialog with the specified body widget. This renders the
+-- dialog as a layer, which makes this suitable as a top-level layer in
+-- your rendering function to be rendered on top of the rest of your
+-- interface.
+renderDialog :: Dialog a -&gt; Widget n -&gt; Widget n
+renderDialog d body =
+    let buttonPadding = str &quot;   &quot;
+        mkButton (i, (s, _)) = let att = if Just i == d^.dialogSelectedIndexL
+                                         then buttonSelectedAttr
+                                         else buttonAttr
+                               in withAttr att $ str $ &quot;  &quot; &lt;&gt; s &lt;&gt; &quot;  &quot;
+        buttons = hBox $ intersperse buttonPadding $
+                         mkButton &lt;$&gt; (zip [0..] (d^.dialogButtonsL))
+
+        doBorder = maybe border borderWithLabel (str &lt;$&gt; d^.dialogTitleL)
+    in centerLayer $
+       withDefAttr dialogAttr $
+       hLimit (d^.dialogWidthL) $
+       doBorder $
+       vBox [ body
+            , hCenter buttons
+            ]
+
+nextButtonBy :: Int -&gt; Dialog a -&gt; Dialog a
+nextButtonBy amt d =
+    let numButtons = length $ d^.dialogButtonsL
+    in if numButtons == 0 then d
+       else case d^.dialogSelectedIndexL of
+           Nothing -&gt; d &amp; dialogSelectedIndexL .~ (Just 0)
+           Just i -&gt; d &amp; dialogSelectedIndexL .~ (Just $ (i + amt) `mod` numButtons)
+
+-- | Obtain the value associated with the dialog's currently-selected
+-- button, if any. This function is probably what you want when someone
+-- presses 'Enter' in a dialog.
+dialogSelection :: Dialog a -&gt; Maybe a
+dialogSelection d =
+    case d^.dialogSelectedIndexL of
+        Nothing -&gt; Nothing
+        Just i -&gt; Just $ ((d^.dialogButtonsL) !! i)^._2
+</span></pre></body></html>

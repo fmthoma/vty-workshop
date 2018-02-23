@@ -1,0 +1,293 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE TupleSections #-}</span><span>
+</span><a name="line-2"></a><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><a name="line-3"></a><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><a name="line-4"></a><span class="hs-pragma">{-# LANGUAGE DeriveFunctor #-}</span><span>
+</span><a name="line-5"></a><span class="hs-pragma">{-# LANGUAGE DeriveFoldable#-}</span><span>
+</span><a name="line-6"></a><span class="hs-pragma">{-# LANGUAGE DeriveTraversable #-}</span><span>
+</span><a name="line-7"></a><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><a name="line-8"></a><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><a name="line-9"></a><span class="hs-comment">-- | This module provides a scrollable list type and functions for</span><span>
+</span><a name="line-10"></a><span class="hs-comment">-- manipulating and rendering it.</span><span>
+</span><a name="line-11"></a><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">Widgets</span><span class="hs-operator">.</span><span class="hs-identifier">List</span><span>
+</span><a name="line-12"></a><span>  </span><span class="hs-special">(</span><span> </span><a href="Brick.Widgets.List.html#List"><span class="hs-identifier hs-type">List</span></a><span class="hs-special">(</span><span class="hs-identifier">listElements</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">listSelected</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">listName</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">listItemHeight</span><span class="hs-special">)</span><span>
+</span><a name="line-13"></a><span>
+</span><a name="line-14"></a><span>  </span><span class="hs-comment">-- * Constructing a list</span><span>
+</span><a name="line-15"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.List.html#list"><span class="hs-identifier hs-var">list</span></a><span>
+</span><a name="line-16"></a><span>
+</span><a name="line-17"></a><span>  </span><span class="hs-comment">-- * Rendering a list</span><span>
+</span><a name="line-18"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.List.html#renderList"><span class="hs-identifier hs-var">renderList</span></a><span>
+</span><a name="line-19"></a><span>
+</span><a name="line-20"></a><span>  </span><span class="hs-comment">-- * Handling events</span><span>
+</span><a name="line-21"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.List.html#handleListEvent"><span class="hs-identifier hs-var">handleListEvent</span></a><span>
+</span><a name="line-22"></a><span>
+</span><a name="line-23"></a><span>  </span><span class="hs-comment">-- * Lenses</span><span>
+</span><a name="line-24"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.List.html#listElementsL"><span class="hs-identifier hs-var">listElementsL</span></a><span>
+</span><a name="line-25"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.List.html#listSelectedL"><span class="hs-identifier hs-var">listSelectedL</span></a><span>
+</span><a name="line-26"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.List.html#listNameL"><span class="hs-identifier hs-var">listNameL</span></a><span>
+</span><a name="line-27"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.List.html#listItemHeightL"><span class="hs-identifier hs-var">listItemHeightL</span></a><span>
+</span><a name="line-28"></a><span>
+</span><a name="line-29"></a><span>  </span><span class="hs-comment">-- * Manipulating a list</span><span>
+</span><a name="line-30"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.List.html#listMoveBy"><span class="hs-identifier hs-var">listMoveBy</span></a><span>
+</span><a name="line-31"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.List.html#listMoveTo"><span class="hs-identifier hs-var">listMoveTo</span></a><span>
+</span><a name="line-32"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.List.html#listMoveUp"><span class="hs-identifier hs-var">listMoveUp</span></a><span>
+</span><a name="line-33"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.List.html#listMoveDown"><span class="hs-identifier hs-var">listMoveDown</span></a><span>
+</span><a name="line-34"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.List.html#listInsert"><span class="hs-identifier hs-var">listInsert</span></a><span>
+</span><a name="line-35"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.List.html#listRemove"><span class="hs-identifier hs-var">listRemove</span></a><span>
+</span><a name="line-36"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.List.html#listReplace"><span class="hs-identifier hs-var">listReplace</span></a><span>
+</span><a name="line-37"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.List.html#listSelectedElement"><span class="hs-identifier hs-var">listSelectedElement</span></a><span>
+</span><a name="line-38"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.List.html#listClear"><span class="hs-identifier hs-var">listClear</span></a><span>
+</span><a name="line-39"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.List.html#listReverse"><span class="hs-identifier hs-var">listReverse</span></a><span>
+</span><a name="line-40"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.List.html#listModify"><span class="hs-identifier hs-var">listModify</span></a><span>
+</span><a name="line-41"></a><span>
+</span><a name="line-42"></a><span>  </span><span class="hs-comment">-- * Attributes</span><span>
+</span><a name="line-43"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.List.html#listAttr"><span class="hs-identifier hs-var">listAttr</span></a><span>
+</span><a name="line-44"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.List.html#listSelectedAttr"><span class="hs-identifier hs-var">listSelectedAttr</span></a><span>
+</span><a name="line-45"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.List.html#listSelectedFocusedAttr"><span class="hs-identifier hs-var">listSelectedFocusedAttr</span></a><span>
+</span><a name="line-46"></a><span>  </span><span class="hs-special">)</span><span>
+</span><a name="line-47"></a><span class="hs-keyword">where</span><span>
+</span><a name="line-48"></a><span>
+</span><a name="line-49"></a><span class="hs-cpp">#if !MIN_VERSION_base(4,8,0)</span><span>
+</span><a name="line-50"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Control</span><span class="hs-operator">.</span><span class="hs-identifier">Applicative</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-operator">&lt;$&gt;</span><span class="hs-special">)</span><span class="hs-special">,</span><span class="hs-special">(</span><span class="hs-operator">&lt;*&gt;</span><span class="hs-special">)</span><span class="hs-special">,</span><span class="hs-identifier">pure</span><span class="hs-special">)</span><span>
+</span><a name="line-51"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data</span><span class="hs-operator">.</span><span class="hs-identifier">Foldable</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">Foldable</span><span class="hs-special">)</span><span>
+</span><a name="line-52"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data</span><span class="hs-operator">.</span><span class="hs-identifier">Traversable</span><span> </span><span class="hs-special">(</span><span class="hs-identifier">Traversable</span><span class="hs-special">)</span><span>
+</span><a name="line-53"></a><span class="hs-cpp">#endif</span><span>
+</span><a name="line-54"></a><span>
+</span><a name="line-55"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Lens</span><span class="hs-operator">.</span><span class="hs-identifier">Micro</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-operator hs-var">^.</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="hs-operator hs-var">&amp;</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="hs-operator hs-var">.~</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><span class="hs-operator hs-var">%~</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">_2</span><span class="hs-special">)</span><span>
+</span><a name="line-56"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data</span><span class="hs-operator">.</span><span class="hs-identifier">Maybe</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-var">fromMaybe</span><span class="hs-special">)</span><span>
+</span><a name="line-57"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data</span><span class="hs-operator">.</span><span class="hs-identifier">Monoid</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-operator hs-var">&lt;&gt;</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a name="line-58"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Graphics</span><span class="hs-operator">.</span><span class="hs-identifier">Vty</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Event</span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Key</span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a name="line-59"></a><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">Data</span><span class="hs-operator">.</span><span class="hs-identifier">Vector</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">V</span><span>
+</span><a name="line-60"></a><span>
+</span><a name="line-61"></a><span class="hs-keyword">import</span><span> </span><a href="Brick.Types.html"><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">Types</span></a><span>
+</span><a name="line-62"></a><span class="hs-keyword">import</span><span> </span><a href="Brick.Main.html"><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">Main</span></a><span> </span><span class="hs-special">(</span><a href="Brick.Main.html#lookupViewport"><span class="hs-identifier hs-var">lookupViewport</span></a><span class="hs-special">)</span><span>
+</span><a name="line-63"></a><span class="hs-keyword">import</span><span> </span><a href="Brick.Widgets.Core.html"><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">Widgets</span><span class="hs-operator">.</span><span class="hs-identifier">Core</span></a><span>
+</span><a name="line-64"></a><span class="hs-keyword">import</span><span> </span><a href="Brick.Util.html"><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">Util</span></a><span> </span><span class="hs-special">(</span><a href="Brick.Util.html#clamp"><span class="hs-identifier hs-var">clamp</span></a><span class="hs-special">)</span><span>
+</span><a name="line-65"></a><span class="hs-keyword">import</span><span> </span><a href="Brick.AttrMap.html"><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">AttrMap</span></a><span>
+</span><a name="line-66"></a><span>
+</span><a name="line-67"></a><span class="hs-comment">-- | List state. Lists have an element type 'e' that is the data stored</span><span>
+</span><a name="line-68"></a><span class="hs-comment">-- by the list.  Lists handle the following events by default:</span><span>
+</span><a name="line-69"></a><span class="hs-comment">--</span><span>
+</span><a name="line-70"></a><span class="hs-comment">-- * Up/down arrow keys: move cursor of selected item</span><span>
+</span><a name="line-71"></a><span class="hs-comment">-- * Page up / page down keys: move cursor of selected item by one page</span><span>
+</span><a name="line-72"></a><span class="hs-comment">--   at a time (based on the number of items shown)</span><span>
+</span><a name="line-73"></a><span class="hs-comment">-- * Home/end keys: move cursor of selected item to beginning or end of</span><span>
+</span><a name="line-74"></a><span class="hs-comment">--   list</span><span>
+</span><a name="line-75"></a><span class="hs-keyword">data</span><span> </span><a name="List"><a href="Brick.Widgets.List.html#List"><span class="hs-identifier">List</span></a></a><span> </span><a name="local-6989586621679319761"><a href="#local-6989586621679319761"><span class="hs-identifier">n</span></a></a><span> </span><a name="local-6989586621679319762"><a href="#local-6989586621679319762"><span class="hs-identifier">e</span></a></a><span> </span><span class="hs-glyph">=</span><span>
+</span><a name="line-76"></a><span>    </span><a name="List"><a href="Brick.Widgets.List.html#List"><span class="hs-identifier">List</span></a></a><span> </span><span class="hs-special">{</span><span> </span><a name="listElements"><a href="Brick.Widgets.List.html#listElements"><span class="hs-identifier">listElements</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="hs-identifier hs-type">V</span><span class="hs-operator hs-type">.</span><span class="hs-identifier hs-type">Vector</span><span> </span><a href="#local-6989586621679319762"><span class="hs-identifier hs-type">e</span></a><span class="hs-special">)</span><span>
+</span><a name="line-77"></a><span>         </span><span class="hs-special">,</span><span> </span><a name="listSelected"><a href="Brick.Widgets.List.html#listSelected"><span class="hs-identifier">listSelected</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-glyph">!</span><span class="hs-special">(</span><span class="hs-identifier hs-type">Maybe</span><span> </span><span class="hs-identifier hs-type">Int</span><span class="hs-special">)</span><span>
+</span><a name="line-78"></a><span>         </span><span class="hs-special">,</span><span> </span><a name="listName"><a href="Brick.Widgets.List.html#listName"><span class="hs-identifier">listName</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><a href="#local-6989586621679319761"><span class="hs-identifier hs-type">n</span></a><span>
+</span><a name="line-79"></a><span>         </span><span class="hs-special">,</span><span> </span><a name="listItemHeight"><a href="Brick.Widgets.List.html#listItemHeight"><span class="hs-identifier">listItemHeight</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Int</span><span>
+</span><a name="line-80"></a><span>         </span><span class="hs-special">}</span><span> </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Functor</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Foldable</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Traversable</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Show</span><span class="hs-special">)</span><span>
+</span><a name="line-81"></a><span>
+</span><a name="line-82"></a><span class="hs-identifier hs-var">suffixLenses</span><span> </span><span class="hs-char">''List
+
+instance Named (List n e) n where
+    getName = listName
+
+handleListEvent :: (Ord n) =&gt; Event -&gt; List n e -&gt; EventM n (List n e)
+handleListEvent e theList =
+    case e of
+        EvKey KUp [] -&gt; return $ listMoveUp theList
+        EvKey KDown [] -&gt; return $ listMoveDown theList
+        EvKey KHome [] -&gt; return $ listMoveTo 0 theList
+        EvKey KEnd [] -&gt; return $ listMoveTo (V.length $ listElements theList) theList
+        EvKey KPageDown [] -&gt; do
+            v &lt;- lookupViewport (theList^.listNameL)
+            case v of
+                Nothing -&gt; return theList
+                Just vp -&gt; return $ listMoveBy (vp^.vpSize._2 `div` theList^.listItemHeightL) theList
+        EvKey KPageUp [] -&gt; do
+            v &lt;- lookupViewport (theList^.listNameL)
+            case v of
+                Nothing -&gt; return theList
+                Just vp -&gt; return $ listMoveBy (negate $ vp^.vpSize._2 `div` theList^.listItemHeightL) theList
+        _ -&gt; return theList
+
+-- | The top-level attribute used for the entire list.
+listAttr :: AttrName
+listAttr = &quot;list&quot;
+
+-- | The attribute used only for the currently-selected list item when
+-- the list does not have focus. Extends 'listAttr'.
+listSelectedAttr :: AttrName
+listSelectedAttr = listAttr &lt;&gt; &quot;selected&quot;
+
+-- | The attribute used only for the currently-selected list item when
+-- the list has focus. Extends 'listSelectedAttr'.
+listSelectedFocusedAttr :: AttrName
+listSelectedFocusedAttr = listSelectedAttr &lt;&gt; &quot;focused&quot;
+
+-- | Construct a list in terms of an element type 'e'.
+list :: n
+     -- ^ The list name (must be unique)
+     -&gt; V.Vector e
+     -- ^ The initial list contents
+     -&gt; Int
+     -- ^ The list item height in rows (all list item widgets must be
+     -- this high)
+     -&gt; List n e
+list name es h =
+    let selIndex = if V.null es then Nothing else Just 0
+        safeHeight = max 1 h
+    in List es selIndex name safeHeight
+
+-- | Turn a list state value into a widget given an item drawing
+-- function.
+renderList :: (Ord n, Show n)
+           =&gt; (Bool -&gt; e -&gt; Widget n)
+           -- ^ Rendering function, True for the selected element
+           -&gt; Bool
+           -- ^ Whether the list has focus
+           -&gt; List n e
+           -- ^ The List to be rendered
+           -&gt; Widget n
+           -- ^ rendered widget
+renderList drawElem foc l =
+    withDefAttr listAttr $
+    drawListElements foc l drawElem
+
+drawListElements :: (Ord n, Show n) =&gt; Bool -&gt; List n e -&gt; (Bool -&gt; e -&gt; Widget n) -&gt; Widget n
+drawListElements foc l drawElem =
+    Widget Greedy Greedy $ do
+        c &lt;- getContext
+
+        let es = V.slice start num (l^.listElementsL)
+            idx = fromMaybe 0 (l^.listSelectedL)
+
+            start = max 0 $ idx - numPerHeight + 1
+            num = min (numPerHeight * 2) (V.length (l^.listElementsL) - start)
+
+            -- The number of items to show is the available height divided by
+            -- the item height...
+            initialNumPerHeight = (c^.availHeightL) `div` (l^.listItemHeightL)
+            -- ... but if the available height leaves a remainder of
+            -- an item height then we need to ensure that we render an
+            -- extra item to show a partial item at the top or bottom to
+            -- give the expected result when an item is more than one
+            -- row high. (Example: 5 rows available with item height
+            -- of 3 yields two items: one fully rendered, the other
+            -- rendered with only its top 2 or bottom 2 rows visible,
+            -- depending on how the viewport state changes.)
+            numPerHeight = initialNumPerHeight +
+                           if initialNumPerHeight * (l^.listItemHeightL) == c^.availHeightL
+                           then 0
+                           else 1
+
+            off = start * (l^.listItemHeightL)
+
+            drawnElements = flip V.imap es $ \i e -&gt;
+                let isSelected = Just (i + start) == l^.listSelectedL
+                    elemWidget = drawElem isSelected e
+                    selItemAttr = if foc
+                                  then withDefAttr listSelectedFocusedAttr
+                                  else withDefAttr listSelectedAttr
+                    makeVisible = if isSelected
+                                  then visible . selItemAttr
+                                  else id
+                in makeVisible elemWidget
+
+        render $ viewport (l^.listNameL) Vertical $
+                 translateBy (Location (0, off)) $
+                 vBox $ V.toList drawnElements
+
+-- | Insert an item into a list at the specified position.
+listInsert :: Int
+           -- ^ The position at which to insert (0 &lt;= i &lt;= size)
+           -&gt; e
+           -- ^ The element to insert
+           -&gt; List n e
+           -&gt; List n e
+listInsert pos e l =
+    let safePos = clamp 0 (V.length es) pos
+        es = l^.listElementsL
+        newSel = case l^.listSelectedL of
+          Nothing -&gt; 0
+          Just s -&gt; if safePos &lt;= s
+                    then s + 1
+                    else s
+        (front, back) = V.splitAt safePos es
+    in l &amp; listSelectedL .~ Just newSel
+         &amp; listElementsL .~ (front V.++ (e `V.cons` back))
+
+-- | Remove an element from a list at the specified position.
+listRemove :: Int
+           -- ^ The position at which to remove an element (0 &lt;= i &lt; size)
+           -&gt; List n e
+           -&gt; List n e
+listRemove pos l | V.null (l^.listElementsL) = l
+                 | pos /= clamp 0 (V.length (l^.listElementsL) - 1) pos = l
+                 | otherwise =
+    let newSel = case l^.listSelectedL of
+          Nothing -&gt; 0
+          Just s | pos == 0 -&gt; 0
+                 | pos == s -&gt; pos - 1
+                 | pos  &lt; s -&gt; s - 1
+                 | otherwise -&gt; s
+        (front, back) = V.splitAt pos es
+        es' = front V.++ V.tail back
+        es = l^.listElementsL
+    in l &amp; listSelectedL .~ (if V.null es' then Nothing else Just newSel)
+         &amp; listElementsL .~ es'
+
+-- | Replace the contents of a list with a new set of elements and
+-- update the new selected index. If the list is empty, empty selection is used
+-- instead. Otherwise, if the specified selected index (via 'Just') is not in
+-- the list bounds, zero is used instead.
+listReplace :: V.Vector e -&gt; Maybe Int -&gt; List n e -&gt; List n e
+listReplace es idx l =
+    let newSel = if V.null es then Nothing else clamp 0 (V.length es - 1) &lt;$&gt; idx
+    in l &amp; listSelectedL .~ newSel
+         &amp; listElementsL .~ es
+
+-- | Move the list selected index up by one. (Moves the cursor up,
+-- subtracts one from the index.)
+listMoveUp :: List n e -&gt; List n e
+listMoveUp = listMoveBy (-1)
+
+-- | Move the list selected index down by one. (Moves the cursor down,
+-- adds one to the index.)
+listMoveDown :: List n e -&gt; List n e
+listMoveDown = listMoveBy 1
+
+-- | Move the list selected index by the specified amount, subject to
+-- validation.
+listMoveBy :: Int -&gt; List n e -&gt; List n e
+listMoveBy amt l =
+    let newSel = clamp 0 (V.length (l^.listElementsL) - 1) &lt;$&gt; (amt +) &lt;$&gt; (l^.listSelectedL)
+    in l &amp; listSelectedL .~ newSel
+
+-- | Set the selected index for a list to the specified index, subject
+-- to validation.
+listMoveTo :: Int -&gt; List n e -&gt; List n e
+listMoveTo pos l =
+    let len = V.length (l^.listElementsL)
+        newSel = clamp 0 (len - 1) $ if pos &lt; 0 then len - pos else pos
+    in l &amp; listSelectedL .~ if len &gt; 0
+                            then Just newSel
+                            else Nothing
+
+-- | Return a list's selected element, if any.
+listSelectedElement :: List n e -&gt; Maybe (Int, e)
+listSelectedElement l = do
+  sel &lt;- l^.listSelectedL
+  return (sel, (l^.listElementsL) V.! sel)
+
+-- | Remove all elements from the list and clear the selection.
+listClear :: List n e -&gt; List n e
+listClear l = l &amp; listElementsL .~ V.empty &amp; listSelectedL .~ Nothing
+
+-- | Reverse the list.  The element selected before the reversal will
+-- again be the selected one.
+listReverse :: List n e -&gt; List n e
+listReverse theList = theList &amp; listElementsL %~ V.reverse &amp; listSelectedL .~ newSel
+  where n = V.length (listElements theList)
+        newSel = (-) &lt;$&gt; pure (n-1) &lt;*&gt; listSelected theList
+
+-- | Apply a function to the selected element. If no element is selected
+-- the list is not modified.
+listModify :: (e -&gt; e) -&gt; List n e -&gt; List n e
+listModify f l = case listSelectedElement l of
+  Nothing -&gt; l
+  Just (n,e) -&gt; let es = V.update (l^.listElementsL) (return (n, f e))
+                in listReplace es (Just n) l
+</span></pre></body></html>

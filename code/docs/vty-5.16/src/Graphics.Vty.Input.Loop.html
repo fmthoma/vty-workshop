@@ -1,0 +1,230 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><a name="line-2"></a><span class="hs-pragma">{-# OPTIONS_HADDOCK hide #-}</span><span>
+</span><a name="line-3"></a><span class="hs-pragma">{-# LANGUAGE NoMonomorphismRestriction #-}</span><span>
+</span><a name="line-4"></a><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><a name="line-5"></a><span class="hs-pragma">{-# LANGUAGE CPP #-}</span><span>
+</span><a name="line-6"></a><span class="hs-comment">-- | The input layer used to be a single function that correctly</span><span>
+</span><a name="line-7"></a><span class="hs-comment">-- accounted for the non-threaded runtime by emulating the terminal</span><span>
+</span><a name="line-8"></a><span class="hs-comment">-- VMIN adn VTIME handling. This has been removed and replace with a</span><span>
+</span><a name="line-9"></a><span class="hs-comment">-- more straightforward parser. The non-threaded runtime is no longer</span><span>
+</span><a name="line-10"></a><span class="hs-comment">-- supported.</span><span>
+</span><a name="line-11"></a><span class="hs-comment">--</span><span>
+</span><a name="line-12"></a><span class="hs-comment">-- This is an example of an algorithm where code coverage could be high,</span><span>
+</span><a name="line-13"></a><span class="hs-comment">-- even 100%, but the behavior is still under tested. I should collect</span><span>
+</span><a name="line-14"></a><span class="hs-comment">-- more of these examples...</span><span>
+</span><a name="line-15"></a><span class="hs-comment">--</span><span>
+</span><a name="line-16"></a><span class="hs-comment">-- reference: http://www.unixwiz.net/techtips/termios-vmin-vtime.html</span><span>
+</span><a name="line-17"></a><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Graphics</span><span class="hs-operator">.</span><span class="hs-identifier">Vty</span><span class="hs-operator">.</span><span class="hs-identifier">Input</span><span class="hs-operator">.</span><span class="hs-identifier">Loop</span><span> </span><span class="hs-keyword">where</span><span>
+</span><a name="line-18"></a><span>
+</span><a name="line-19"></a><span class="hs-keyword">import</span><span> </span><a href="Graphics.Vty.Config.html"><span class="hs-identifier">Graphics</span><span class="hs-operator">.</span><span class="hs-identifier">Vty</span><span class="hs-operator">.</span><span class="hs-identifier">Config</span></a><span>
+</span><a name="line-20"></a><span class="hs-keyword">import</span><span> </span><a href="Graphics.Vty.Input.Classify.html"><span class="hs-identifier">Graphics</span><span class="hs-operator">.</span><span class="hs-identifier">Vty</span><span class="hs-operator">.</span><span class="hs-identifier">Input</span><span class="hs-operator">.</span><span class="hs-identifier">Classify</span></a><span>
+</span><a name="line-21"></a><span class="hs-keyword">import</span><span> </span><a href="Graphics.Vty.Input.Events.html"><span class="hs-identifier">Graphics</span><span class="hs-operator">.</span><span class="hs-identifier">Vty</span><span class="hs-operator">.</span><span class="hs-identifier">Input</span><span class="hs-operator">.</span><span class="hs-identifier">Events</span></a><span>
+</span><a name="line-22"></a><span>
+</span><a name="line-23"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Control</span><span class="hs-operator">.</span><span class="hs-identifier">Applicative</span><span>
+</span><a name="line-24"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Control</span><span class="hs-operator">.</span><span class="hs-identifier">Concurrent</span><span>
+</span><a name="line-25"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Control</span><span class="hs-operator">.</span><span class="hs-identifier">Concurrent</span><span class="hs-operator">.</span><span class="hs-identifier">STM</span><span>
+</span><a name="line-26"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Control</span><span class="hs-operator">.</span><span class="hs-identifier">Exception</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-var">mask</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">try</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">SomeException</span><span class="hs-special">)</span><span>
+</span><a name="line-27"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Lens</span><span class="hs-operator">.</span><span class="hs-identifier">Micro</span><span>
+</span><a name="line-28"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Lens</span><span class="hs-operator">.</span><span class="hs-identifier">Micro</span><span class="hs-operator">.</span><span class="hs-identifier">Mtl</span><span>
+</span><a name="line-29"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Lens</span><span class="hs-operator">.</span><span class="hs-identifier">Micro</span><span class="hs-operator">.</span><span class="hs-identifier">TH</span><span>
+</span><a name="line-30"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Control</span><span class="hs-operator">.</span><span class="hs-identifier">Monad</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-var">when</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">mzero</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">forM_</span><span class="hs-special">)</span><span>
+</span><a name="line-31"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Control</span><span class="hs-operator">.</span><span class="hs-identifier">Monad</span><span class="hs-operator">.</span><span class="hs-identifier">IO</span><span class="hs-operator">.</span><span class="hs-identifier">Class</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-var">liftIO</span><span class="hs-special">)</span><span>
+</span><a name="line-32"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Control</span><span class="hs-operator">.</span><span class="hs-identifier">Monad</span><span class="hs-operator">.</span><span class="hs-identifier">Trans</span><span class="hs-operator">.</span><span class="hs-identifier">State</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">StateT</span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">evalStateT</span><span class="hs-special">)</span><span>
+</span><a name="line-33"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Control</span><span class="hs-operator">.</span><span class="hs-identifier">Monad</span><span class="hs-operator">.</span><span class="hs-identifier">State</span><span class="hs-operator">.</span><span class="hs-identifier">Class</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">MonadState</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">modify</span><span class="hs-special">)</span><span>
+</span><a name="line-34"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Control</span><span class="hs-operator">.</span><span class="hs-identifier">Monad</span><span class="hs-operator">.</span><span class="hs-identifier">Trans</span><span class="hs-operator">.</span><span class="hs-identifier">Reader</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">ReaderT</span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a name="line-35"></a><span>
+</span><a name="line-36"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data</span><span class="hs-operator">.</span><span class="hs-identifier">Char</span><span>
+</span><a name="line-37"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data</span><span class="hs-operator">.</span><span class="hs-identifier">IORef</span><span>
+</span><a name="line-38"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data</span><span class="hs-operator">.</span><span class="hs-identifier">Word</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Word8</span><span class="hs-special">)</span><span>
+</span><a name="line-39"></a><span>
+</span><a name="line-40"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Foreign</span><span> </span><span class="hs-special">(</span><span> </span><span class="hs-identifier hs-var">allocaArray</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">peekArray</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Ptr</span><span> </span><span class="hs-special">)</span><span>
+</span><a name="line-41"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Foreign</span><span class="hs-operator">.</span><span class="hs-identifier">C</span><span class="hs-operator">.</span><span class="hs-identifier">Types</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">CInt</span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a name="line-42"></a><span>
+</span><a name="line-43"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">System</span><span class="hs-operator">.</span><span class="hs-identifier">IO</span><span>
+</span><a name="line-44"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">System</span><span class="hs-operator">.</span><span class="hs-identifier">Posix</span><span class="hs-operator">.</span><span class="hs-identifier">IO</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-var">fdReadBuf</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">setFdOption</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">FdOption</span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a name="line-45"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">System</span><span class="hs-operator">.</span><span class="hs-identifier">Posix</span><span class="hs-operator">.</span><span class="hs-identifier">Terminal</span><span>
+</span><a name="line-46"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">System</span><span class="hs-operator">.</span><span class="hs-identifier">Posix</span><span class="hs-operator">.</span><span class="hs-identifier">Types</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Fd</span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a name="line-47"></a><span>
+</span><a name="line-48"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Text</span><span class="hs-operator">.</span><span class="hs-identifier">Printf</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-var">hPrintf</span><span class="hs-special">)</span><span>
+</span><a name="line-49"></a><span>
+</span><a name="line-50"></a><span class="hs-keyword">data</span><span> </span><a name="Input"><a href="Graphics.Vty.Input.Loop.html#Input"><span class="hs-identifier">Input</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a name="Input"><a href="Graphics.Vty.Input.Loop.html#Input"><span class="hs-identifier">Input</span></a></a><span>
+</span><a name="line-51"></a><span>    </span><span class="hs-special">{</span><span> </span><span class="hs-comment">-- | Channel of events direct from input processing. Unlike</span><span>
+</span><a name="line-52"></a><span>      </span><span class="hs-comment">-- 'nextEvent' this will not refresh the display if the next event</span><span>
+</span><a name="line-53"></a><span>      </span><span class="hs-comment">-- is an 'EvResize'.</span><span>
+</span><a name="line-54"></a><span>      </span><a name="_eventChannel"><a href="Graphics.Vty.Input.Loop.html#_eventChannel"><span class="hs-identifier">_eventChannel</span></a></a><span>  </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">TChan</span><span> </span><a href="Graphics.Vty.Input.Events.html#Event"><span class="hs-identifier hs-type">Event</span></a><span>
+</span><a name="line-55"></a><span>      </span><span class="hs-comment">-- | Shuts down the input processing. This should return the</span><span>
+</span><a name="line-56"></a><span>      </span><span class="hs-comment">-- terminal input state to before he input initialized.</span><span>
+</span><a name="line-57"></a><span>    </span><span class="hs-special">,</span><span> </span><a name="shutdownInput"><a href="Graphics.Vty.Input.Loop.html#shutdownInput"><span class="hs-identifier">shutdownInput</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">IO</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><a name="line-58"></a><span>      </span><span class="hs-comment">-- | Changes to this value are reflected after the next event.</span><span>
+</span><a name="line-59"></a><span>    </span><span class="hs-special">,</span><span> </span><a name="_configRef"><a href="Graphics.Vty.Input.Loop.html#_configRef"><span class="hs-identifier">_configRef</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">IORef</span><span> </span><a href="Graphics.Vty.Config.html#Config"><span class="hs-identifier hs-type">Config</span></a><span>
+</span><a name="line-60"></a><span>      </span><span class="hs-comment">-- | input debug log</span><span>
+</span><a name="line-61"></a><span>    </span><span class="hs-special">,</span><span> </span><a name="_inputDebug"><a href="Graphics.Vty.Input.Loop.html#_inputDebug"><span class="hs-identifier">_inputDebug</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Maybe</span><span> </span><span class="hs-identifier hs-type">Handle</span><span>
+</span><a name="line-62"></a><span>    </span><span class="hs-special">}</span><span>
+</span><a name="line-63"></a><span>
+</span><a name="line-64"></a><span class="hs-identifier hs-var">makeLenses</span><span> </span><span class="hs-char">''Input
+
+data InputBuffer = InputBuffer
+    { _ptr :: Ptr Word8
+    , _size :: Int
+    }
+
+makeLenses ''InputBuffer
+
+data InputState = InputState
+    { _unprocessedBytes :: String
+    , _appliedConfig :: Config
+    , _inputBuffer :: InputBuffer
+    , _classifier :: String -&gt; KClass
+    }
+
+makeLenses ''InputState
+
+type InputM a = StateT InputState (ReaderT Input IO) a
+
+logMsg :: String -&gt; InputM ()
+logMsg msg = do
+    d &lt;- view inputDebug
+    case d of
+        Nothing -&gt; return ()
+        Just h -&gt; liftIO $ hPutStrLn h msg &gt;&gt; hFlush h
+
+-- this must be run on an OS thread dedicated to this input handling.
+-- otherwise the terminal timing read behavior will block the execution
+-- of the lightweight threads.
+loopInputProcessor :: InputM ()
+loopInputProcessor = do
+    readFromDevice &gt;&gt;= addBytesToProcess
+    validEvents &lt;- many parseEvent
+    forM_ validEvents emit
+    dropInvalid
+    loopInputProcessor
+
+addBytesToProcess :: String -&gt; InputM ()
+addBytesToProcess block = unprocessedBytes &lt;&gt;= block
+
+emit :: Event -&gt; InputM ()
+emit event = do
+    logMsg $ &quot;parsed event: &quot; ++ show event
+    view eventChannel &gt;&gt;= liftIO . atomically . flip writeTChan event
+
+-- The timing requirements are assured by the VMIN and VTIME set for the
+-- device.
+--
+-- Precondition: Under the threaded runtime. Only current use is from a
+-- forkOS thread. That case satisfies precondition.
+readFromDevice :: InputM String
+readFromDevice = do
+    newConfig &lt;- view configRef &gt;&gt;= liftIO . readIORef
+    oldConfig &lt;- use appliedConfig
+    let Just fd = inputFd newConfig
+    when (newConfig /= oldConfig) $ do
+        logMsg $ &quot;new config: &quot; ++ show newConfig
+        liftIO $ applyConfig fd newConfig
+        appliedConfig .= newConfig
+    bufferPtr &lt;- use $ inputBuffer.ptr
+    maxBytes  &lt;- use $ inputBuffer.size
+    stringRep &lt;- liftIO $ do
+        -- The killThread used in shutdownInput will not interrupt the
+        -- foreign call fdReadBuf uses this provides a location to be
+        -- interrupted prior to the foreign call. If there is input on
+        -- the FD then the fdReadBuf will return in a finite amount of
+        -- time due to the vtime terminal setting.
+        threadWaitRead fd
+        bytesRead &lt;- fdReadBuf fd bufferPtr (fromIntegral maxBytes)
+        if bytesRead &gt; 0
+        then fmap (map $ chr . fromIntegral) $ peekArray (fromIntegral bytesRead) bufferPtr
+        else return []
+    when (not $ null stringRep) $ logMsg $ &quot;input bytes: &quot; ++ show stringRep
+    return stringRep
+
+applyConfig :: Fd -&gt; Config -&gt; IO ()
+applyConfig fd (Config{ vmin = Just theVmin, vtime = Just theVtime })
+    = setTermTiming fd theVmin (theVtime `div` 100)
+applyConfig _ _ = fail &quot;(vty) applyConfig was not provided a complete configuration&quot;
+
+parseEvent :: InputM Event
+parseEvent = do
+    c &lt;- use classifier
+    b &lt;- use unprocessedBytes
+    case c b of
+        Valid e remaining -&gt; do
+            logMsg $ &quot;valid parse: &quot; ++ show e
+            logMsg $ &quot;remaining: &quot; ++ show remaining
+            unprocessedBytes .= remaining
+            return e
+        _                   -&gt; mzero
+
+dropInvalid :: InputM ()
+dropInvalid = do
+    c &lt;- use classifier
+    b &lt;- use unprocessedBytes
+    when (c b == Invalid) $ do
+        logMsg &quot;dropping input bytes&quot;
+        unprocessedBytes .= []
+
+runInputProcessorLoop :: ClassifyMap -&gt; Input -&gt; IO ()
+runInputProcessorLoop classifyTable input = do
+    let bufferSize = 1024
+    allocaArray bufferSize $ \(bufferPtr :: Ptr Word8) -&gt; do
+        s0 &lt;- InputState [] &lt;$&gt; readIORef (_configRef input)
+                            &lt;*&gt; pure (InputBuffer bufferPtr bufferSize)
+                            &lt;*&gt; pure (classify classifyTable)
+        runReaderT (evalStateT loopInputProcessor s0) input
+
+attributeControl :: Fd -&gt; IO (IO (), IO ())
+attributeControl fd = do
+    original &lt;- getTerminalAttributes fd
+    let vtyMode = foldl withoutMode original [ StartStopOutput, KeyboardInterrupts
+                                             , EnableEcho, ProcessInput, ExtendedFunctions
+                                             ]
+    let setAttrs = setTerminalAttributes fd vtyMode Immediately
+        unsetAttrs = setTerminalAttributes fd original Immediately
+    return (setAttrs,unsetAttrs)
+
+logInitialInputState :: Input -&gt; ClassifyMap -&gt; IO()
+logInitialInputState input classifyTable = case _inputDebug input of
+    Nothing -&gt; return ()
+    Just h  -&gt; do
+        Config{ vmin = Just theVmin
+              , vtime = Just theVtime
+              , termName = Just theTerm, .. } &lt;- readIORef $ _configRef input
+        _ &lt;- hPrintf h &quot;initial (vmin,vtime): %s\n&quot; (show (theVmin, theVtime))
+        forM_ classifyTable $ \i -&gt; case i of
+            (inBytes, EvKey k mods) -&gt; hPrintf h &quot;map %s %s %s %s\n&quot; (show theTerm)
+                                                                     (show inBytes)
+                                                                     (show k)
+                                                                     (show mods)
+            _ -&gt; return ()
+
+initInput :: Config -&gt; ClassifyMap -&gt; IO Input
+initInput config classifyTable = do
+    let Just fd = inputFd config
+    setFdOption fd NonBlockingRead False
+    applyConfig fd config
+    stopSync &lt;- newEmptyMVar
+    input &lt;- Input &lt;$&gt; atomically newTChan
+                   &lt;*&gt; pure (return ())
+                   &lt;*&gt; newIORef config
+                   &lt;*&gt; maybe (return Nothing)
+                             (\f -&gt; Just &lt;$&gt; openFile f AppendMode)
+                             (debugLog config)
+    logInitialInputState input classifyTable
+    inputThread &lt;- forkOSFinally (runInputProcessorLoop classifyTable input)
+                                 (\_ -&gt; putMVar stopSync ())
+    let killAndWait = do
+          killThread inputThread
+          takeMVar stopSync
+    return $ input { shutdownInput = killAndWait }
+
+foreign import ccall &quot;vty_set_term_timing&quot; setTermTiming :: Fd -&gt; Int -&gt; Int -&gt; IO ()
+
+forkOSFinally :: IO a -&gt; (Either SomeException a -&gt; IO ()) -&gt; IO ThreadId
+forkOSFinally action and_then =
+  mask $ \restore -&gt; forkOS $ try (restore action) &gt;&gt;= and_then
+
+(&lt;&gt;=) :: (MonadState s m, Monoid a) =&gt; ASetter' s a -&gt; a -&gt; m ()
+l &lt;&gt;= a = modify (l &lt;&gt;~ a)
+
+(&lt;&gt;~) :: Monoid a =&gt; ASetter s t a a -&gt; a -&gt; s -&gt; t
+l &lt;&gt;~ n = over l (`mappend` n)
+</span></pre></body></html>

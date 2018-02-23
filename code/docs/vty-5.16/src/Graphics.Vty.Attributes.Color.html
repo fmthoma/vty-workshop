@@ -1,0 +1,101 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Graphics</span><span class="hs-operator">.</span><span class="hs-identifier">Vty</span><span class="hs-operator">.</span><span class="hs-identifier">Attributes</span><span class="hs-operator">.</span><span class="hs-identifier">Color</span><span>
+</span><a name="line-2"></a><span>  </span><span class="hs-special">(</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#Color"><span class="hs-identifier hs-type">Color</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-3"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#black"><span class="hs-identifier hs-var">black</span></a><span>
+</span><a name="line-4"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#red"><span class="hs-identifier hs-var">red</span></a><span>
+</span><a name="line-5"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#green"><span class="hs-identifier hs-var">green</span></a><span>
+</span><a name="line-6"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#yellow"><span class="hs-identifier hs-var">yellow</span></a><span>
+</span><a name="line-7"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#blue"><span class="hs-identifier hs-var">blue</span></a><span>
+</span><a name="line-8"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#magenta"><span class="hs-identifier hs-var">magenta</span></a><span>
+</span><a name="line-9"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#cyan"><span class="hs-identifier hs-var">cyan</span></a><span>
+</span><a name="line-10"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#white"><span class="hs-identifier hs-var">white</span></a><span>
+</span><a name="line-11"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#brightBlack"><span class="hs-identifier hs-var">brightBlack</span></a><span>
+</span><a name="line-12"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#brightRed"><span class="hs-identifier hs-var">brightRed</span></a><span>
+</span><a name="line-13"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#brightGreen"><span class="hs-identifier hs-var">brightGreen</span></a><span>
+</span><a name="line-14"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#brightYellow"><span class="hs-identifier hs-var">brightYellow</span></a><span>
+</span><a name="line-15"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#brightBlue"><span class="hs-identifier hs-var">brightBlue</span></a><span>
+</span><a name="line-16"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#brightMagenta"><span class="hs-identifier hs-var">brightMagenta</span></a><span>
+</span><a name="line-17"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#brightCyan"><span class="hs-identifier hs-var">brightCyan</span></a><span>
+</span><a name="line-18"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#brightWhite"><span class="hs-identifier hs-var">brightWhite</span></a><span>
+</span><a name="line-19"></a><span>  </span><span class="hs-special">)</span><span>
+</span><a name="line-20"></a><span class="hs-keyword">where</span><span>
+</span><a name="line-21"></a><span>
+</span><a name="line-22"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data</span><span class="hs-operator">.</span><span class="hs-identifier">Word</span><span>
+</span><a name="line-23"></a><span>
+</span><a name="line-24"></a><span class="hs-comment">-- | Abstract data type representing a color.</span><span>
+</span><a name="line-25"></a><span class="hs-comment">--</span><span>
+</span><a name="line-26"></a><span class="hs-comment">-- Currently the foreground and background color are specified as points</span><span>
+</span><a name="line-27"></a><span class="hs-comment">-- in either a:</span><span>
+</span><a name="line-28"></a><span class="hs-comment">--</span><span>
+</span><a name="line-29"></a><span class="hs-comment">--  * 16 color palette. Where the first 8 colors are equal to the 8</span><span>
+</span><a name="line-30"></a><span class="hs-comment">--  colors of the ISO 6429 (ANSI) 8 color palette and the second 8</span><span>
+</span><a name="line-31"></a><span class="hs-comment">--  colors are bright/vivid versions of the first 8 colors.</span><span>
+</span><a name="line-32"></a><span class="hs-comment">--</span><span>
+</span><a name="line-33"></a><span class="hs-comment">--  * 240 color palette. This palette is a regular sampling of the full</span><span>
+</span><a name="line-34"></a><span class="hs-comment">--  RGB colorspace for the first 224 colors. The remaining 16 colors is</span><span>
+</span><a name="line-35"></a><span class="hs-comment">--  a greyscale palette.</span><span>
+</span><a name="line-36"></a><span class="hs-comment">--</span><span>
+</span><a name="line-37"></a><span class="hs-comment">-- The 8 ISO 6429 (ANSI) colors are as follows:</span><span>
+</span><a name="line-38"></a><span class="hs-comment">--</span><span>
+</span><a name="line-39"></a><span class="hs-comment">--      0. black</span><span>
+</span><a name="line-40"></a><span class="hs-comment">--</span><span>
+</span><a name="line-41"></a><span class="hs-comment">--      1. red</span><span>
+</span><a name="line-42"></a><span class="hs-comment">--</span><span>
+</span><a name="line-43"></a><span class="hs-comment">--      2. green</span><span>
+</span><a name="line-44"></a><span class="hs-comment">--</span><span>
+</span><a name="line-45"></a><span class="hs-comment">--      3. yellow</span><span>
+</span><a name="line-46"></a><span class="hs-comment">--</span><span>
+</span><a name="line-47"></a><span class="hs-comment">--      4. blue</span><span>
+</span><a name="line-48"></a><span class="hs-comment">--</span><span>
+</span><a name="line-49"></a><span class="hs-comment">--      5. magenta</span><span>
+</span><a name="line-50"></a><span class="hs-comment">--</span><span>
+</span><a name="line-51"></a><span class="hs-comment">--      6. cyan</span><span>
+</span><a name="line-52"></a><span class="hs-comment">--</span><span>
+</span><a name="line-53"></a><span class="hs-comment">--      7. white</span><span>
+</span><a name="line-54"></a><span class="hs-comment">--</span><span>
+</span><a name="line-55"></a><span class="hs-comment">-- The mapping from points in the 240 color palette to colors actually</span><span>
+</span><a name="line-56"></a><span class="hs-comment">-- displayable by the terminal depends on the number of colors the</span><span>
+</span><a name="line-57"></a><span class="hs-comment">-- terminal claims to support. Which is usually determined by the</span><span>
+</span><a name="line-58"></a><span class="hs-comment">-- terminfo &quot;colors&quot; property. If this property is not being accurately</span><span>
+</span><a name="line-59"></a><span class="hs-comment">-- reported then the color reproduction will be incorrect.</span><span>
+</span><a name="line-60"></a><span class="hs-comment">--</span><span>
+</span><a name="line-61"></a><span class="hs-comment">-- If the terminal reports &lt;= 16 colors then the 240 color palette</span><span>
+</span><a name="line-62"></a><span class="hs-comment">-- points are only mapped to the 8 color pallete. I'm not sure of</span><span>
+</span><a name="line-63"></a><span class="hs-comment">-- the RGB points for the &quot;bright&quot; colors which is why they are not</span><span>
+</span><a name="line-64"></a><span class="hs-comment">-- addressable via the 240 color palette.</span><span>
+</span><a name="line-65"></a><span class="hs-comment">--</span><span>
+</span><a name="line-66"></a><span class="hs-comment">-- If the terminal reports &gt; 16 colors then the 240 color palette</span><span>
+</span><a name="line-67"></a><span class="hs-comment">-- points are mapped to the nearest points in a (&quot;color count&quot; - 16)</span><span>
+</span><a name="line-68"></a><span class="hs-comment">-- subsampling of the 240 color palette.</span><span>
+</span><a name="line-69"></a><span class="hs-comment">--</span><span>
+</span><a name="line-70"></a><span class="hs-comment">-- All of this assumes the terminals are behaving similarly to xterm and</span><span>
+</span><a name="line-71"></a><span class="hs-comment">-- rxvt when handling colors. And that the individual colors have not</span><span>
+</span><a name="line-72"></a><span class="hs-comment">-- been remapped by the user. There may be a way to verify this through</span><span>
+</span><a name="line-73"></a><span class="hs-comment">-- terminfo but I don't know it.</span><span>
+</span><a name="line-74"></a><span class="hs-comment">--</span><span>
+</span><a name="line-75"></a><span class="hs-comment">-- Seriously, terminal color support is INSANE.</span><span>
+</span><a name="line-76"></a><span class="hs-keyword">data</span><span> </span><a name="Color"><a href="Graphics.Vty.Attributes.Color.html#Color"><span class="hs-identifier">Color</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a name="ISOColor"><a href="Graphics.Vty.Attributes.Color.html#ISOColor"><span class="hs-identifier">ISOColor</span></a></a><span> </span><span class="hs-glyph">!</span><span class="hs-identifier hs-type">Word8</span><span> </span><span class="hs-glyph">|</span><span> </span><a name="Color240"><a href="Graphics.Vty.Attributes.Color.html#Color240"><span class="hs-identifier">Color240</span></a></a><span> </span><span class="hs-glyph">!</span><span class="hs-identifier hs-type">Word8</span><span>
+</span><a name="line-77"></a><span>    </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span> </span><span class="hs-identifier hs-type">Eq</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Show</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Read</span><span> </span><span class="hs-special">)</span><span>
+</span><a name="line-78"></a><span>
+</span><a name="line-79"></a><span class="hs-comment">-- | Standard 8-color ANSI terminal color codes.</span><span>
+</span><a name="line-80"></a><span class="hs-identifier">black</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">red</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">green</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">yellow</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">blue</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">magenta</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">cyan</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">white</span><span> </span><span class="hs-glyph">::</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#Color"><span class="hs-identifier hs-type">Color</span></a><span>
+</span><a name="line-81"></a><a name="black"><a href="Graphics.Vty.Attributes.Color.html#black"><span class="hs-identifier">black</span></a></a><span>  </span><span class="hs-glyph">=</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#ISOColor"><span class="hs-identifier hs-var">ISOColor</span></a><span> </span><span class="hs-number">0</span><span>
+</span><a name="line-82"></a><a name="red"><a href="Graphics.Vty.Attributes.Color.html#red"><span class="hs-identifier">red</span></a></a><span>    </span><span class="hs-glyph">=</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#ISOColor"><span class="hs-identifier hs-var">ISOColor</span></a><span> </span><span class="hs-number">1</span><span>
+</span><a name="line-83"></a><a name="green"><a href="Graphics.Vty.Attributes.Color.html#green"><span class="hs-identifier">green</span></a></a><span>  </span><span class="hs-glyph">=</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#ISOColor"><span class="hs-identifier hs-var">ISOColor</span></a><span> </span><span class="hs-number">2</span><span>
+</span><a name="line-84"></a><a name="yellow"><a href="Graphics.Vty.Attributes.Color.html#yellow"><span class="hs-identifier">yellow</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#ISOColor"><span class="hs-identifier hs-var">ISOColor</span></a><span> </span><span class="hs-number">3</span><span>
+</span><a name="line-85"></a><a name="blue"><a href="Graphics.Vty.Attributes.Color.html#blue"><span class="hs-identifier">blue</span></a></a><span>   </span><span class="hs-glyph">=</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#ISOColor"><span class="hs-identifier hs-var">ISOColor</span></a><span> </span><span class="hs-number">4</span><span>
+</span><a name="line-86"></a><a name="magenta"><a href="Graphics.Vty.Attributes.Color.html#magenta"><span class="hs-identifier">magenta</span></a></a><span class="hs-glyph">=</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#ISOColor"><span class="hs-identifier hs-var">ISOColor</span></a><span> </span><span class="hs-number">5</span><span>
+</span><a name="line-87"></a><a name="cyan"><a href="Graphics.Vty.Attributes.Color.html#cyan"><span class="hs-identifier">cyan</span></a></a><span>   </span><span class="hs-glyph">=</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#ISOColor"><span class="hs-identifier hs-var">ISOColor</span></a><span> </span><span class="hs-number">6</span><span>
+</span><a name="line-88"></a><a name="white"><a href="Graphics.Vty.Attributes.Color.html#white"><span class="hs-identifier">white</span></a></a><span>  </span><span class="hs-glyph">=</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#ISOColor"><span class="hs-identifier hs-var">ISOColor</span></a><span> </span><span class="hs-number">7</span><span>
+</span><a name="line-89"></a><span>
+</span><a name="line-90"></a><span class="hs-comment">-- | Bright/Vivid variants of the standard 8-color ANSI</span><span>
+</span><a name="line-91"></a><span class="hs-identifier">brightBlack</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">brightRed</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">brightGreen</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">brightYellow</span><span> </span><span class="hs-glyph">::</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#Color"><span class="hs-identifier hs-type">Color</span></a><span>
+</span><a name="line-92"></a><span class="hs-identifier">brightBlue</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">brightMagenta</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">brightCyan</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">brightWhite</span><span> </span><span class="hs-glyph">::</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#Color"><span class="hs-identifier hs-type">Color</span></a><span>
+</span><a name="line-93"></a><a name="brightBlack"><a href="Graphics.Vty.Attributes.Color.html#brightBlack"><span class="hs-identifier">brightBlack</span></a></a><span>  </span><span class="hs-glyph">=</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#ISOColor"><span class="hs-identifier hs-var">ISOColor</span></a><span> </span><span class="hs-number">8</span><span>
+</span><a name="line-94"></a><a name="brightRed"><a href="Graphics.Vty.Attributes.Color.html#brightRed"><span class="hs-identifier">brightRed</span></a></a><span>    </span><span class="hs-glyph">=</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#ISOColor"><span class="hs-identifier hs-var">ISOColor</span></a><span> </span><span class="hs-number">9</span><span>
+</span><a name="line-95"></a><a name="brightGreen"><a href="Graphics.Vty.Attributes.Color.html#brightGreen"><span class="hs-identifier">brightGreen</span></a></a><span>  </span><span class="hs-glyph">=</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#ISOColor"><span class="hs-identifier hs-var">ISOColor</span></a><span> </span><span class="hs-number">10</span><span>
+</span><a name="line-96"></a><a name="brightYellow"><a href="Graphics.Vty.Attributes.Color.html#brightYellow"><span class="hs-identifier">brightYellow</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#ISOColor"><span class="hs-identifier hs-var">ISOColor</span></a><span> </span><span class="hs-number">11</span><span>
+</span><a name="line-97"></a><a name="brightBlue"><a href="Graphics.Vty.Attributes.Color.html#brightBlue"><span class="hs-identifier">brightBlue</span></a></a><span>   </span><span class="hs-glyph">=</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#ISOColor"><span class="hs-identifier hs-var">ISOColor</span></a><span> </span><span class="hs-number">12</span><span>
+</span><a name="line-98"></a><a name="brightMagenta"><a href="Graphics.Vty.Attributes.Color.html#brightMagenta"><span class="hs-identifier">brightMagenta</span></a></a><span class="hs-glyph">=</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#ISOColor"><span class="hs-identifier hs-var">ISOColor</span></a><span> </span><span class="hs-number">13</span><span>
+</span><a name="line-99"></a><a name="brightCyan"><a href="Graphics.Vty.Attributes.Color.html#brightCyan"><span class="hs-identifier">brightCyan</span></a></a><span>   </span><span class="hs-glyph">=</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#ISOColor"><span class="hs-identifier hs-var">ISOColor</span></a><span> </span><span class="hs-number">14</span><span>
+</span><a name="line-100"></a><a name="brightWhite"><a href="Graphics.Vty.Attributes.Color.html#brightWhite"><span class="hs-identifier">brightWhite</span></a></a><span>  </span><span class="hs-glyph">=</span><span> </span><a href="Graphics.Vty.Attributes.Color.html#ISOColor"><span class="hs-identifier hs-var">ISOColor</span></a><span> </span><span class="hs-number">15</span><span>
+</span><a name="line-101"></a></pre></body></html>

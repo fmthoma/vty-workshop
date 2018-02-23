@@ -1,0 +1,204 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE LambdaCase #-}</span><span>
+</span><a name="line-2"></a><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Exercises</span><span class="hs-operator">.</span><span class="hs-identifier">Brick</span><span> </span><span class="hs-special">(</span><span>
+</span><a name="line-3"></a><span>
+</span><a name="line-4"></a><span>    </span><span class="hs-comment">-- * Exercises</span><span>
+</span><a name="line-5"></a><span>
+</span><a name="line-6"></a><span>    </span><span class="hs-comment">-- ** Exercise 5</span><span>
+</span><a name="line-7"></a><span>      </span><a href="Exercises.Brick.html#brickListApp"><span class="hs-identifier hs-var">brickListApp</span></a><span>
+</span><a name="line-8"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Exercises.Brick.html#brickListAppState"><span class="hs-identifier hs-var">brickListAppState</span></a><span>
+</span><a name="line-9"></a><span>
+</span><a name="line-10"></a><span>    </span><span class="hs-comment">-- ** Exercise 6</span><span>
+</span><a name="line-11"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Exercises.Brick.html#dialogApp"><span class="hs-identifier hs-var">dialogApp</span></a><span>
+</span><a name="line-12"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Exercises.Brick.html#yesNoDialog"><span class="hs-identifier hs-var">yesNoDialog</span></a><span>
+</span><a name="line-13"></a><span>
+</span><a name="line-14"></a><span>    </span><span class="hs-comment">-- ** Exercise 7</span><span>
+</span><a name="line-15"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Exercises.Brick.html#renderPongPaddle"><span class="hs-identifier hs-var">renderPongPaddle</span></a><span>
+</span><a name="line-16"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Exercises.Brick.html#pongPaddleApp"><span class="hs-identifier hs-var">pongPaddleApp</span></a><span>
+</span><a name="line-17"></a><span>
+</span><a name="line-18"></a><span>    </span><span class="hs-comment">-- * Utilities</span><span>
+</span><a name="line-19"></a><span>
+</span><a name="line-20"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">simpleMain</span><span>
+</span><a name="line-21"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Exercises.Brick.html#SimpleApp"><span class="hs-identifier hs-type">SimpleApp</span></a><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-22"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Exercises.Brick.html#runSimpleBrickApp"><span class="hs-identifier hs-var">runSimpleBrickApp</span></a><span>
+</span><a name="line-23"></a><span>
+</span><a name="line-24"></a><span>    </span><span class="hs-comment">-- * Library Functions</span><span>
+</span><a name="line-25"></a><span>
+</span><a name="line-26"></a><span>    </span><span class="hs-comment">-- ** 'List' Widget</span><span>
+</span><a name="line-27"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">List</span><span>
+</span><a name="line-28"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">list</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">renderList</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">handleListEvent</span><span>
+</span><a name="line-29"></a><span>
+</span><a name="line-30"></a><span>    </span><span class="hs-comment">-- ** 'Dialog' Widget</span><span>
+</span><a name="line-31"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Dialog</span><span>
+</span><a name="line-32"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">dialog</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">renderDialog</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">handleDialogEvent</span><span>
+</span><a name="line-33"></a><span>
+</span><a name="line-34"></a><span>    </span><span class="hs-comment">-- ** Basic Widgets</span><span>
+</span><a name="line-35"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">str</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">center</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">hCenter</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">padAll</span><span>
+</span><a name="line-36"></a><span>
+</span><a name="line-37"></a><span>    </span><span class="hs-comment">-- ** 'AttrMap's</span><span>
+</span><a name="line-38"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">attrMap</span><span>
+</span><a name="line-39"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">listAttr</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">listSelectedAttr</span><span>
+</span><a name="line-40"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">dialogAttr</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">buttonAttr</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">buttonSelectedAttr</span><span>
+</span><a name="line-41"></a><span>
+</span><a name="line-42"></a><span>    </span><span class="hs-comment">-- ** Rendering</span><span>
+</span><a name="line-43"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Result</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">emptyResult</span><span>
+</span><a name="line-44"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">translateX</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">translateY</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">charFill</span><span>
+</span><a name="line-45"></a><span>
+</span><a name="line-46"></a><span>    </span><span class="hs-comment">-- ** 'Event's &amp; handling</span><span>
+</span><a name="line-47"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">BrickEvent</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-48"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Event</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-49"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Key</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-50"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Next</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">continue</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">halt</span><span>
+</span><a name="line-51"></a><span>
+</span><a name="line-52"></a><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><a name="line-53"></a><span>
+</span><a name="line-54"></a><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Brick</span><span>
+</span><a name="line-55"></a><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">Widgets</span><span class="hs-operator">.</span><span class="hs-identifier">Center</span><span>
+</span><a name="line-56"></a><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">Widgets</span><span class="hs-operator">.</span><span class="hs-identifier">Dialog</span><span>
+</span><a name="line-57"></a><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">Widgets</span><span class="hs-operator">.</span><span class="hs-identifier">List</span><span>
+</span><a name="line-58"></a><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">Data</span><span class="hs-operator">.</span><span class="hs-identifier">Vector</span><span>          </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">Vector</span><span>
+</span><a name="line-59"></a><span class="hs-keyword">import</span><span>           </span><span class="hs-identifier">Graphics</span><span class="hs-operator">.</span><span class="hs-identifier">Vty</span><span>         </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">Vty</span><span>
+</span><a name="line-60"></a><span>
+</span><a name="line-61"></a><span>
+</span><a name="line-62"></a><span class="hs-comment">-- | A simplified version of Brick's 'App' type.</span><span>
+</span><a name="line-63"></a><span class="hs-comment">--</span><span>
+</span><a name="line-64"></a><span class="hs-comment">-- @'SimpleApp' s e n@ is an application with state @s@ and internal names of</span><span>
+</span><a name="line-65"></a><span class="hs-comment">-- type @n@.</span><span>
+</span><a name="line-66"></a><span class="hs-keyword">data</span><span> </span><a name="SimpleApp"><a href="Exercises.Brick.html#SimpleApp"><span class="hs-identifier">SimpleApp</span></a></a><span> </span><a name="local-6989586621679111815"><a href="#local-6989586621679111815"><span class="hs-identifier">s</span></a></a><span> </span><a name="local-6989586621679111816"><a href="#local-6989586621679111816"><span class="hs-identifier">n</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a name="SimpleApp"><a href="Exercises.Brick.html#SimpleApp"><span class="hs-identifier">SimpleApp</span></a></a><span>
+</span><a name="line-67"></a><span>    </span><span class="hs-special">{</span><span> </span><a name="simpleAppDraw"><a href="Exercises.Brick.html#simpleAppDraw"><span class="hs-identifier">simpleAppDraw</span></a></a><span>        </span><span class="hs-glyph">::</span><span> </span><a href="#local-6989586621679111815"><span class="hs-identifier hs-type">s</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">[</span><span class="hs-identifier hs-type">Widget</span><span> </span><a href="#local-6989586621679111816"><span class="hs-identifier hs-type">n</span></a><span class="hs-special">]</span><span>
+</span><a name="line-68"></a><span>    </span><span class="hs-comment">-- ^ The drawing function. Widgets are stacked, the first item in the list</span><span>
+</span><a name="line-69"></a><span>    </span><span class="hs-comment">-- appears on top.</span><span>
+</span><a name="line-70"></a><span>    </span><span class="hs-comment">--</span><span>
+</span><a name="line-71"></a><span>    </span><span class="hs-comment">-- @</span><span>
+</span><a name="line-72"></a><span>    </span><span class="hs-comment">-- simpleAppDraw :: 'String' -&gt; ['Widget' n]</span><span>
+</span><a name="line-73"></a><span>    </span><span class="hs-comment">-- simpleAppDraw = \s -&gt; ['str' s]</span><span>
+</span><a name="line-74"></a><span>    </span><span class="hs-comment">-- @</span><span>
+</span><a name="line-75"></a><span>
+</span><a name="line-76"></a><span>    </span><span class="hs-special">,</span><span> </span><a name="simpleAppHandleEvent"><a href="Exercises.Brick.html#simpleAppHandleEvent"><span class="hs-identifier">simpleAppHandleEvent</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><a href="#local-6989586621679111815"><span class="hs-identifier hs-type">s</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">BrickEvent</span><span> </span><a href="#local-6989586621679111816"><span class="hs-identifier hs-type">n</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">EventM</span><span> </span><a href="#local-6989586621679111816"><span class="hs-identifier hs-type">n</span></a><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Next</span><span> </span><a href="#local-6989586621679111815"><span class="hs-identifier hs-type">s</span></a><span class="hs-special">)</span><span>
+</span><a name="line-77"></a><span>    </span><span class="hs-comment">-- ^ Handle a Brick event. The 'EventM' type allows access to Brick's</span><span>
+</span><a name="line-78"></a><span>    </span><span class="hs-comment">-- internal state (e.g. @'getVtyHandle' :: 'EventM' n 'Vty'@). To determine</span><span>
+</span><a name="line-79"></a><span>    </span><span class="hs-comment">-- the next action, use one of:</span><span>
+</span><a name="line-80"></a><span>    </span><span class="hs-comment">--</span><span>
+</span><a name="line-81"></a><span>    </span><span class="hs-comment">-- * @'continue' :: s -&gt; 'EventM' n ('Next' s)@ to resume with an updated</span><span>
+</span><a name="line-82"></a><span>    </span><span class="hs-comment">--   application state</span><span>
+</span><a name="line-83"></a><span>    </span><span class="hs-comment">-- * @'halt' :: s -&gt; 'EventM' n ('Next' s)@ to end the app with a given</span><span>
+</span><a name="line-84"></a><span>    </span><span class="hs-comment">--   final state</span><span>
+</span><a name="line-85"></a><span>    </span><span class="hs-comment">-- * @'suspendAndResume' :: 'IO' s -&gt; 'EventM' n ('Next' s)@ to suspend the</span><span>
+</span><a name="line-86"></a><span>    </span><span class="hs-comment">--   application, run the given 'IO' action, and resume with the new</span><span>
+</span><a name="line-87"></a><span>    </span><span class="hs-comment">--   application state.</span><span>
+</span><a name="line-88"></a><span>    </span><span class="hs-comment">--</span><span>
+</span><a name="line-89"></a><span>    </span><span class="hs-comment">-- @</span><span>
+</span><a name="line-90"></a><span>    </span><span class="hs-comment">-- simpleAppHandleEvent :: 'Int' -&gt; 'BrickEvent' n () -&gt; 'EventM' n ('Next' s)</span><span>
+</span><a name="line-91"></a><span>    </span><span class="hs-comment">-- simpleAppHandleEvent = \n e -&gt; case e of</span><span>
+</span><a name="line-92"></a><span>    </span><span class="hs-comment">--     'VtyEvent' ('EvKey' 'KUp' [])   -&gt; 'continue' (n + 1)</span><span>
+</span><a name="line-93"></a><span>    </span><span class="hs-comment">--     'VtyEvent' ('EvKey' 'KDown' []) -&gt; 'continue' (n - 1)</span><span>
+</span><a name="line-94"></a><span>    </span><span class="hs-comment">--     'VtyEvent' ('EvKey' 'KEsc' [])  -&gt; 'halt' n</span><span>
+</span><a name="line-95"></a><span>    </span><span class="hs-comment">--     _otherwise                -&gt; 'continue' n</span><span>
+</span><a name="line-96"></a><span>    </span><span class="hs-comment">-- @</span><span>
+</span><a name="line-97"></a><span>
+</span><a name="line-98"></a><span>    </span><span class="hs-special">,</span><span> </span><a name="simpleAppAttrMap"><a href="Exercises.Brick.html#simpleAppAttrMap"><span class="hs-identifier">simpleAppAttrMap</span></a></a><span>     </span><span class="hs-glyph">::</span><span> </span><a href="#local-6989586621679111815"><span class="hs-identifier hs-type">s</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">AttrMap</span><span>
+</span><a name="line-99"></a><span>    </span><span class="hs-comment">-- ^ Define a state-dependent 'AttrMap'. An 'AttrMap' is constructed using</span><span>
+</span><a name="line-100"></a><span>    </span><span class="hs-comment">-- @'attrMap' :: 'Attr' -&gt; [('AttrName', 'Attr')] -&gt; 'AttrMap'@, where the</span><span>
+</span><a name="line-101"></a><span>    </span><span class="hs-comment">-- first argument is the default attribute (usually 'defAttr'), and the</span><span>
+</span><a name="line-102"></a><span>    </span><span class="hs-comment">-- second argument are overrides for special attributes. For 'AttrName's,</span><span>
+</span><a name="line-103"></a><span>    </span><span class="hs-comment">-- see documentation of the individual 'Widget's.</span><span>
+</span><a name="line-104"></a><span>    </span><span class="hs-special">}</span><span>
+</span><a name="line-105"></a><span>
+</span><a name="line-106"></a><span class="hs-comment">-- | Runs a 'SimpleApp' full-screen and prints the final state after the</span><span>
+</span><a name="line-107"></a><span class="hs-comment">-- application is ended.</span><span>
+</span><a name="line-108"></a><span class="hs-comment">--</span><span>
+</span><a name="line-109"></a><span class="hs-comment">-- @</span><span>
+</span><a name="line-110"></a><span class="hs-comment">-- let app :: 'SimpleApp' () ()</span><span>
+</span><a name="line-111"></a><span class="hs-comment">--     app = 'SimpleApp'</span><span>
+</span><a name="line-112"></a><span class="hs-comment">--         { simpleAppDraw = \_ -&gt; ['str' &quot;Hello World&quot;]</span><span>
+</span><a name="line-113"></a><span class="hs-comment">--         , simpleAppHandleEvent = \_ _ -&gt; 'halt' ()</span><span>
+</span><a name="line-114"></a><span class="hs-comment">--         , simpleAppAttrMap = \_ -&gt; 'attrMap' 'defAttr' [] }</span><span>
+</span><a name="line-115"></a><span class="hs-comment">-- in 'runSimpleBrickApp' app ()</span><span>
+</span><a name="line-116"></a><span class="hs-comment">-- @</span><span>
+</span><a name="line-117"></a><span class="hs-identifier">runSimpleBrickApp</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Ord</span><span> </span><a href="#local-6989586621679111819"><span class="hs-identifier hs-type">n</span></a><span> </span><span class="hs-glyph">=&gt;</span><span> </span><a href="Exercises.Brick.html#SimpleApp"><span class="hs-identifier hs-type">SimpleApp</span></a><span> </span><a href="#local-6989586621679111820"><span class="hs-identifier hs-type">s</span></a><span> </span><a href="#local-6989586621679111819"><span class="hs-identifier hs-type">n</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="#local-6989586621679111820"><span class="hs-identifier hs-type">s</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">IO</span><span> </span><a href="#local-6989586621679111820"><span class="hs-identifier hs-type">s</span></a><span>
+</span><a name="line-118"></a><a name="runSimpleBrickApp"><a href="Exercises.Brick.html#runSimpleBrickApp"><span class="hs-identifier">runSimpleBrickApp</span></a></a><span> </span><a name="local-6989586621679111821"><a href="#local-6989586621679111821"><span class="hs-identifier">simpleApp</span></a></a><span> </span><a name="local-6989586621679111822"><a href="#local-6989586621679111822"><span class="hs-identifier">initialState</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">defaultMain</span><span> </span><a href="#local-6989586621679111823"><span class="hs-identifier hs-var">app</span></a><span> </span><a href="#local-6989586621679111822"><span class="hs-identifier hs-var">initialState</span></a><span>
+</span><a name="line-119"></a><span>  </span><span class="hs-keyword">where</span><span>
+</span><a name="line-120"></a><span>    </span><a name="local-6989586621679111823"><a href="#local-6989586621679111823"><span class="hs-identifier">app</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">App</span><span>
+</span><a name="line-121"></a><span>        </span><span class="hs-special">{</span><span> </span><span class="hs-identifier">appDraw</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">simpleAppDraw</span><span> </span><a href="#local-6989586621679111821"><span class="hs-identifier hs-var">simpleApp</span></a><span>
+</span><a name="line-122"></a><span>        </span><span class="hs-special">,</span><span> </span><span class="hs-identifier">appChooseCursor</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">neverShowCursor</span><span>
+</span><a name="line-123"></a><span>        </span><span class="hs-special">,</span><span> </span><span class="hs-identifier">appHandleEvent</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">simpleAppHandleEvent</span><span> </span><a href="#local-6989586621679111821"><span class="hs-identifier hs-var">simpleApp</span></a><span>
+</span><a name="line-124"></a><span>        </span><span class="hs-special">,</span><span> </span><span class="hs-identifier">appStartEvent</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">pure</span><span>
+</span><a name="line-125"></a><span>        </span><span class="hs-special">,</span><span> </span><span class="hs-identifier">appAttrMap</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier">simpleAppAttrMap</span><span> </span><a href="#local-6989586621679111821"><span class="hs-identifier hs-var">simpleApp</span></a><span> </span><span class="hs-special">}</span><span>
+</span><a name="line-126"></a><span>
+</span><a name="line-127"></a><span class="hs-comment">-- | Similar to 'VtyTest.list2', but now we use Brick. The selected item should</span><span>
+</span><a name="line-128"></a><span class="hs-comment">-- be highlighted, the arrow keys should change the selection. The @Enter@ key</span><span>
+</span><a name="line-129"></a><span class="hs-comment">-- should end the application.</span><span>
+</span><a name="line-130"></a><span class="hs-comment">--</span><span>
+</span><a name="line-131"></a><span class="hs-comment">-- Brick already supplies us with a 'List' 'Widget', so have a look at functions</span><span>
+</span><a name="line-132"></a><span class="hs-comment">-- like 'renderList' and 'handleListEvent'.</span><span>
+</span><a name="line-133"></a><span class="hs-comment">--</span><span>
+</span><a name="line-134"></a><span class="hs-comment">-- Keep in mind that everything will be renderd in default style unless you</span><span>
+</span><a name="line-135"></a><span class="hs-comment">-- define an `attrMap`!</span><span>
+</span><a name="line-136"></a><span class="hs-comment">--</span><span>
+</span><a name="line-137"></a><span class="hs-comment">-- Bonus: 'center' the list horizontally and vertically on the screen.</span><span>
+</span><a name="line-138"></a><span class="hs-comment">--</span><span>
+</span><a name="line-139"></a><span class="hs-comment">-- @</span><span>
+</span><a name="line-140"></a><span class="hs-comment">-- 'runSimpleBrickApp' 'brickListApp' 'brickListAppState' &gt;&gt;= 'print' . 'listSelectedElement'</span><span>
+</span><a name="line-141"></a><span class="hs-comment">-- @</span><span>
+</span><a name="line-142"></a><span class="hs-identifier">brickListApp</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Ord</span><span> </span><a href="#local-6989586621679111818"><span class="hs-identifier hs-type">n</span></a><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Show</span><span> </span><a href="#local-6989586621679111818"><span class="hs-identifier hs-type">n</span></a><span class="hs-special">)</span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><a href="Exercises.Brick.html#SimpleApp"><span class="hs-identifier hs-type">SimpleApp</span></a><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">List</span><span> </span><a href="#local-6989586621679111818"><span class="hs-identifier hs-type">n</span></a><span> </span><span class="hs-identifier hs-type">String</span><span class="hs-special">)</span><span> </span><a href="#local-6989586621679111818"><span class="hs-identifier hs-type">n</span></a><span>
+</span><a name="line-143"></a><a name="brickListApp"><a href="Exercises.Brick.html#brickListApp"><span class="hs-identifier">brickListApp</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="Exercises.Brick.html#SimpleApp"><span class="hs-identifier hs-var">SimpleApp</span></a><span>
+</span><a name="line-144"></a><span>    </span><span class="hs-special">{</span><span> </span><span class="hs-identifier">simpleAppDraw</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><a name="local-6989586621679111824"><a href="#local-6989586621679111824"><span class="hs-identifier">state</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-var">undefined</span><span>
+</span><a name="line-145"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier">simpleAppHandleEvent</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><a name="local-6989586621679111825"><a href="#local-6989586621679111825"><span class="hs-identifier">state</span></a></a><span> </span><a name="local-6989586621679111826"><a href="#local-6989586621679111826"><span class="hs-identifier">event</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-var">undefined</span><span>
+</span><a name="line-146"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier">simpleAppAttrMap</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><a name="local-6989586621679111827"><a href="#local-6989586621679111827"><span class="hs-identifier">state</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-var">undefined</span><span>
+</span><a name="line-147"></a><span>    </span><span class="hs-special">}</span><span>
+</span><a name="line-148"></a><span>
+</span><a name="line-149"></a><span class="hs-identifier">brickListAppState</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">List</span><span> </span><span class="hs-identifier hs-type">String</span><span> </span><span class="hs-identifier hs-type">String</span><span>
+</span><a name="line-150"></a><a name="brickListAppState"><a href="Exercises.Brick.html#brickListAppState"><span class="hs-identifier">brickListAppState</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">list</span><span> </span><span class="hs-string">&quot;myList&quot;</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-var">fmap</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-string">&quot;Item &quot;</span><span> </span><span class="hs-operator hs-var">++</span><span class="hs-special">)</span><span> </span><span class="hs-operator hs-var">.</span><span> </span><span class="hs-identifier hs-var">show</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-var">Vector</span><span class="hs-operator hs-var">.</span><span class="hs-identifier hs-var">fromList</span><span> </span><span class="hs-special">[</span><span class="hs-number">1</span><span class="hs-glyph">..</span><span class="hs-number">10</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Int</span><span class="hs-special">]</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="hs-number">0</span><span>
+</span><a name="line-151"></a><span>
+</span><a name="line-152"></a><span class="hs-comment">-- | A 'Dialog' asking the user to answer &#187;Yes&#171; or &#187;No&#171;.</span><span>
+</span><a name="line-153"></a><span class="hs-comment">--</span><span>
+</span><a name="line-154"></a><span class="hs-comment">-- Brick supplies us with a 'Dialog' Widget, have a look at 'renderDialog' and</span><span>
+</span><a name="line-155"></a><span class="hs-comment">-- 'handleDialogEvent'.</span><span>
+</span><a name="line-156"></a><span class="hs-comment">--</span><span>
+</span><a name="line-157"></a><span class="hs-comment">-- The dialog should be rendered in reverse video, with the active button in</span><span>
+</span><a name="line-158"></a><span class="hs-comment">-- red.</span><span>
+</span><a name="line-159"></a><span class="hs-comment">--</span><span>
+</span><a name="line-160"></a><span class="hs-comment">-- @</span><span>
+</span><a name="line-161"></a><span class="hs-comment">-- 'runSimpleBrickApp' 'dialogApp' 'yesNoDialog' &gt;&gt;= 'print' . 'dialogSelection'</span><span>
+</span><a name="line-162"></a><span class="hs-comment">-- @</span><span>
+</span><a name="line-163"></a><span class="hs-identifier">dialogApp</span><span> </span><span class="hs-glyph">::</span><span> </span><a href="Exercises.Brick.html#SimpleApp"><span class="hs-identifier hs-type">SimpleApp</span></a><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Dialog</span><span> </span><span class="hs-identifier hs-type">Bool</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><a name="line-164"></a><a name="dialogApp"><a href="Exercises.Brick.html#dialogApp"><span class="hs-identifier">dialogApp</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="Exercises.Brick.html#SimpleApp"><span class="hs-identifier hs-var">SimpleApp</span></a><span>
+</span><a name="line-165"></a><span>    </span><span class="hs-special">{</span><span> </span><span class="hs-identifier">simpleAppDraw</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><a name="local-6989586621679111828"><a href="#local-6989586621679111828"><span class="hs-identifier">state</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-var">undefined</span><span>
+</span><a name="line-166"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier">simpleAppHandleEvent</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><a name="local-6989586621679111829"><a href="#local-6989586621679111829"><span class="hs-identifier">state</span></a></a><span> </span><a name="local-6989586621679111830"><a href="#local-6989586621679111830"><span class="hs-identifier">event</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-var">undefined</span><span>
+</span><a name="line-167"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier">simpleAppAttrMap</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><a name="local-6989586621679111831"><a href="#local-6989586621679111831"><span class="hs-identifier">state</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-var">undefined</span><span>
+</span><a name="line-168"></a><span>    </span><span class="hs-special">}</span><span>
+</span><a name="line-169"></a><span>
+</span><a name="line-170"></a><span class="hs-identifier">yesNoDialog</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Dialog</span><span> </span><span class="hs-identifier hs-type">Bool</span><span>
+</span><a name="line-171"></a><a name="yesNoDialog"><a href="Exercises.Brick.html#yesNoDialog"><span class="hs-identifier">yesNoDialog</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">undefined</span><span>
+</span><a name="line-172"></a><span>
+</span><a name="line-173"></a><span class="hs-comment">-- | Define your own 'Widget'.</span><span>
+</span><a name="line-174"></a><span class="hs-comment">--</span><span>
+</span><a name="line-175"></a><span class="hs-comment">-- Create a widget that renders a Pong paddle. The function takes as parameters</span><span>
+</span><a name="line-176"></a><span class="hs-comment">-- the offset of the top edge of the paddle, and the height of the paddle. The</span><span>
+</span><a name="line-177"></a><span class="hs-comment">-- widget should be unbounded ('Greedy') in height, and have a width of exactly</span><span>
+</span><a name="line-178"></a><span class="hs-comment">-- 1. For the render function, use 'emptyResult' and add an image using the Vty</span><span>
+</span><a name="line-179"></a><span class="hs-comment">-- render functions in &quot;Graphics.Vty.Image&quot;.</span><span>
+</span><a name="line-180"></a><span class="hs-comment">--</span><span>
+</span><a name="line-181"></a><span class="hs-comment">-- @</span><span>
+</span><a name="line-182"></a><span class="hs-comment">-- 'simpleMain' ('renderPongPaddle' (10, 10))</span><span>
+</span><a name="line-183"></a><span class="hs-comment">-- @</span><span>
+</span><a name="line-184"></a><span class="hs-identifier">renderPongPaddle</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Int</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Int</span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">Widget</span><span> </span><a href="#local-6989586621679111817"><span class="hs-identifier hs-type">n</span></a><span>
+</span><a name="line-185"></a><a name="renderPongPaddle"><a href="Exercises.Brick.html#renderPongPaddle"><span class="hs-identifier">renderPongPaddle</span></a></a><span> </span><span class="hs-special">(</span><a name="local-6989586621679111832"><a href="#local-6989586621679111832"><span class="hs-identifier">paddleTop</span></a></a><span class="hs-special">,</span><span> </span><a name="local-6989586621679111833"><a href="#local-6989586621679111833"><span class="hs-identifier">paddleHeight</span></a></a><span class="hs-special">)</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">Widget</span><span>
+</span><a name="line-186"></a><span>    </span><span class="hs-special">{</span><span> </span><span class="hs-identifier">hSize</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">undefined</span><span>
+</span><a name="line-187"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier">vSize</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">undefined</span><span>
+</span><a name="line-188"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier">render</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">pure</span><span> </span><span class="hs-identifier hs-var">emptyResult</span><span>
+</span><a name="line-189"></a><span>        </span><span class="hs-special">{</span><span> </span><span class="hs-identifier">image</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">undefined</span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-special">}</span><span>
+</span><a name="line-190"></a><span>
+</span><a name="line-191"></a><span class="hs-comment">-- | Integrate the pong paddle widget into an app.</span><span>
+</span><a name="line-192"></a><span class="hs-comment">--</span><span>
+</span><a name="line-193"></a><span class="hs-comment">-- Arrow keys should move the paddle up and down, Esc should end the</span><span>
+</span><a name="line-194"></a><span class="hs-comment">-- application.</span><span>
+</span><a name="line-195"></a><span class="hs-comment">--</span><span>
+</span><a name="line-196"></a><span class="hs-comment">-- @</span><span>
+</span><a name="line-197"></a><span class="hs-comment">-- 'runSimpleBrickApp' 'pongPaddleApp' (10, 10)</span><span>
+</span><a name="line-198"></a><span class="hs-comment">-- @</span><span>
+</span><a name="line-199"></a><span class="hs-identifier">pongPaddleApp</span><span> </span><span class="hs-glyph">::</span><span> </span><a href="Exercises.Brick.html#SimpleApp"><span class="hs-identifier hs-type">SimpleApp</span></a><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Int</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Int</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><a name="line-200"></a><a name="pongPaddleApp"><a href="Exercises.Brick.html#pongPaddleApp"><span class="hs-identifier">pongPaddleApp</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="Exercises.Brick.html#SimpleApp"><span class="hs-identifier hs-var">SimpleApp</span></a><span>
+</span><a name="line-201"></a><span>    </span><span class="hs-special">{</span><span> </span><span class="hs-identifier">simpleAppDraw</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><a name="local-6989586621679111834"><a href="#local-6989586621679111834"><span class="hs-identifier">state</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-var">undefined</span><span>
+</span><a name="line-202"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier">simpleAppHandleEvent</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><span class="hs-special">(</span><a name="local-6989586621679111835"><a href="#local-6989586621679111835"><span class="hs-identifier">paddleTop</span></a></a><span class="hs-special">,</span><span> </span><a name="local-6989586621679111836"><a href="#local-6989586621679111836"><span class="hs-identifier">paddleHeight</span></a></a><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-var">undefined</span><span>
+</span><a name="line-203"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-identifier">simpleAppAttrMap</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-glyph">\</span><a name="local-6989586621679111837"><a href="#local-6989586621679111837"><span class="hs-identifier">state</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-var">attrMap</span><span> </span><span class="hs-identifier hs-var">defAttr</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span> </span><span class="hs-special">}</span><span>
+</span><a name="line-204"></a></pre></body></html>

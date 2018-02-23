@@ -1,0 +1,238 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveFunctor #-}</span><span>
+</span><a name="line-2"></a><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><a name="line-3"></a><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><a name="line-4"></a><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">Types</span><span class="hs-operator">.</span><span class="hs-identifier">Internal</span><span>
+</span><a name="line-5"></a><span>  </span><span class="hs-special">(</span><span> </span><a href="Brick.Types.Internal.html#ScrollRequest"><span class="hs-identifier hs-type">ScrollRequest</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-6"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#VisibilityRequest"><span class="hs-identifier hs-type">VisibilityRequest</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-7"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#vrPositionL"><span class="hs-identifier hs-var">vrPositionL</span></a><span>
+</span><a name="line-8"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#vrSizeL"><span class="hs-identifier hs-var">vrSizeL</span></a><span>
+</span><a name="line-9"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#Location"><span class="hs-identifier hs-type">Location</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-10"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#locL"><span class="hs-identifier hs-var">locL</span></a><span>
+</span><a name="line-11"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#origin"><span class="hs-identifier hs-var">origin</span></a><span>
+</span><a name="line-12"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#TerminalLocation"><span class="hs-identifier hs-type">TerminalLocation</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-13"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#Viewport"><span class="hs-identifier hs-type">Viewport</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-14"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#ViewportType"><span class="hs-identifier hs-type">ViewportType</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-15"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#RenderState"><span class="hs-identifier hs-type">RenderState</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-16"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#Direction"><span class="hs-identifier hs-type">Direction</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-17"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#CursorLocation"><span class="hs-identifier hs-type">CursorLocation</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-18"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#cursorLocationL"><span class="hs-identifier hs-var">cursorLocationL</span></a><span>
+</span><a name="line-19"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#cursorLocationNameL"><span class="hs-identifier hs-var">cursorLocationNameL</span></a><span>
+</span><a name="line-20"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#Context"><span class="hs-identifier hs-type">Context</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-21"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#EventState"><span class="hs-identifier hs-type">EventState</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-22"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#EventRO"><span class="hs-identifier hs-type">EventRO</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-23"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#Next"><span class="hs-identifier hs-type">Next</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-24"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#Result"><span class="hs-identifier hs-type">Result</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-25"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#Extent"><span class="hs-identifier hs-type">Extent</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-26"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#CacheInvalidateRequest"><span class="hs-identifier hs-type">CacheInvalidateRequest</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-27"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#BrickEvent"><span class="hs-identifier hs-type">BrickEvent</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-28"></a><span>
+</span><a name="line-29"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#rsScrollRequestsL"><span class="hs-identifier hs-var">rsScrollRequestsL</span></a><span>
+</span><a name="line-30"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#viewportMapL"><span class="hs-identifier hs-var">viewportMapL</span></a><span>
+</span><a name="line-31"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#clickableNamesL"><span class="hs-identifier hs-var">clickableNamesL</span></a><span>
+</span><a name="line-32"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#renderCacheL"><span class="hs-identifier hs-var">renderCacheL</span></a><span>
+</span><a name="line-33"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#observedNamesL"><span class="hs-identifier hs-var">observedNamesL</span></a><span>
+</span><a name="line-34"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#vpSize"><span class="hs-identifier hs-var">vpSize</span></a><span>
+</span><a name="line-35"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#vpLeft"><span class="hs-identifier hs-var">vpLeft</span></a><span>
+</span><a name="line-36"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#vpTop"><span class="hs-identifier hs-var">vpTop</span></a><span>
+</span><a name="line-37"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#imageL"><span class="hs-identifier hs-var">imageL</span></a><span>
+</span><a name="line-38"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#cursorsL"><span class="hs-identifier hs-var">cursorsL</span></a><span>
+</span><a name="line-39"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#extentsL"><span class="hs-identifier hs-var">extentsL</span></a><span>
+</span><a name="line-40"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#visibilityRequestsL"><span class="hs-identifier hs-var">visibilityRequestsL</span></a><span>
+</span><a name="line-41"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#emptyResult"><span class="hs-identifier hs-var">emptyResult</span></a><span>
+</span><a name="line-42"></a><span>  </span><span class="hs-special">)</span><span>
+</span><a name="line-43"></a><span class="hs-keyword">where</span><span>
+</span><a name="line-44"></a><span>
+</span><a name="line-45"></a><span class="hs-cpp">#if !MIN_VERSION_base(4,8,0)</span><span>
+</span><a name="line-46"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data</span><span class="hs-operator">.</span><span class="hs-identifier">Monoid</span><span>
+</span><a name="line-47"></a><span class="hs-cpp">#endif</span><span>
+</span><a name="line-48"></a><span>
+</span><a name="line-49"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Lens</span><span class="hs-operator">.</span><span class="hs-identifier">Micro</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-var">_1</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">_2</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Lens'</span><span class="hs-special">)</span><span>
+</span><a name="line-50"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Lens</span><span class="hs-operator">.</span><span class="hs-identifier">Micro</span><span class="hs-operator">.</span><span class="hs-identifier">TH</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-var">makeLenses</span><span class="hs-special">)</span><span>
+</span><a name="line-51"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Lens</span><span class="hs-operator">.</span><span class="hs-identifier">Micro</span><span class="hs-operator">.</span><span class="hs-identifier">Internal</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Field1</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Field2</span><span class="hs-special">)</span><span>
+</span><a name="line-52"></a><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">Data</span><span class="hs-operator">.</span><span class="hs-identifier">Set</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">S</span><span>
+</span><a name="line-53"></a><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">Data</span><span class="hs-operator">.</span><span class="hs-identifier">Map</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">M</span><span>
+</span><a name="line-54"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Graphics</span><span class="hs-operator">.</span><span class="hs-identifier">Vty</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Vty</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Event</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Button</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Modifier</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">DisplayRegion</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Image</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-var">emptyImage</span><span class="hs-special">)</span><span>
+</span><a name="line-55"></a><span>
+</span><a name="line-56"></a><span class="hs-keyword">import</span><span> </span><a href="Brick.Types.TH.html"><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">Types</span><span class="hs-operator">.</span><span class="hs-identifier">TH</span></a><span>
+</span><a name="line-57"></a><span class="hs-keyword">import</span><span> </span><a href="Brick.AttrMap.html"><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">AttrMap</span></a><span> </span><span class="hs-special">(</span><a href="Brick.AttrMap.html#AttrName"><span class="hs-identifier hs-type">AttrName</span></a><span class="hs-special">,</span><span> </span><a href="Brick.AttrMap.html#AttrMap"><span class="hs-identifier hs-type">AttrMap</span></a><span class="hs-special">)</span><span>
+</span><a name="line-58"></a><span class="hs-keyword">import</span><span> </span><a href="Brick.Widgets.Border.Style.html"><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">Widgets</span><span class="hs-operator">.</span><span class="hs-identifier">Border</span><span class="hs-operator">.</span><span class="hs-identifier">Style</span></a><span> </span><span class="hs-special">(</span><a href="Brick.Widgets.Border.Style.html#BorderStyle"><span class="hs-identifier hs-type">BorderStyle</span></a><span class="hs-special">)</span><span>
+</span><a name="line-59"></a><span>
+</span><a name="line-60"></a><span class="hs-keyword">data</span><span> </span><a name="ScrollRequest"><a href="Brick.Types.Internal.html#ScrollRequest"><span class="hs-identifier">ScrollRequest</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a name="HScrollBy"><a href="Brick.Types.Internal.html#HScrollBy"><span class="hs-identifier">HScrollBy</span></a></a><span> </span><span class="hs-identifier hs-type">Int</span><span>
+</span><a name="line-61"></a><span>                   </span><span class="hs-glyph">|</span><span> </span><a name="HScrollPage"><a href="Brick.Types.Internal.html#HScrollPage"><span class="hs-identifier">HScrollPage</span></a></a><span> </span><a href="Brick.Types.Internal.html#Direction"><span class="hs-identifier hs-type">Direction</span></a><span>
+</span><a name="line-62"></a><span>                   </span><span class="hs-glyph">|</span><span> </span><a name="HScrollToBeginning"><a href="Brick.Types.Internal.html#HScrollToBeginning"><span class="hs-identifier">HScrollToBeginning</span></a></a><span>
+</span><a name="line-63"></a><span>                   </span><span class="hs-glyph">|</span><span> </span><a name="HScrollToEnd"><a href="Brick.Types.Internal.html#HScrollToEnd"><span class="hs-identifier">HScrollToEnd</span></a></a><span>
+</span><a name="line-64"></a><span>                   </span><span class="hs-glyph">|</span><span> </span><a name="VScrollBy"><a href="Brick.Types.Internal.html#VScrollBy"><span class="hs-identifier">VScrollBy</span></a></a><span> </span><span class="hs-identifier hs-type">Int</span><span>
+</span><a name="line-65"></a><span>                   </span><span class="hs-glyph">|</span><span> </span><a name="VScrollPage"><a href="Brick.Types.Internal.html#VScrollPage"><span class="hs-identifier">VScrollPage</span></a></a><span> </span><a href="Brick.Types.Internal.html#Direction"><span class="hs-identifier hs-type">Direction</span></a><span>
+</span><a name="line-66"></a><span>                   </span><span class="hs-glyph">|</span><span> </span><a name="VScrollToBeginning"><a href="Brick.Types.Internal.html#VScrollToBeginning"><span class="hs-identifier">VScrollToBeginning</span></a></a><span>
+</span><a name="line-67"></a><span>                   </span><span class="hs-glyph">|</span><span> </span><a name="VScrollToEnd"><a href="Brick.Types.Internal.html#VScrollToEnd"><span class="hs-identifier">VScrollToEnd</span></a></a><span>
+</span><a name="line-68"></a><span>                   </span><span class="hs-glyph">|</span><span> </span><a name="SetTop"><a href="Brick.Types.Internal.html#SetTop"><span class="hs-identifier">SetTop</span></a></a><span> </span><span class="hs-identifier hs-type">Int</span><span>
+</span><a name="line-69"></a><span>                   </span><span class="hs-glyph">|</span><span> </span><a name="SetLeft"><a href="Brick.Types.Internal.html#SetLeft"><span class="hs-identifier">SetLeft</span></a></a><span> </span><span class="hs-identifier hs-type">Int</span><span>
+</span><a name="line-70"></a><span>
+</span><a name="line-71"></a><span class="hs-keyword">data</span><span> </span><a name="VisibilityRequest"><a href="Brick.Types.Internal.html#VisibilityRequest"><span class="hs-identifier">VisibilityRequest</span></a></a><span> </span><span class="hs-glyph">=</span><span>
+</span><a name="line-72"></a><span>    </span><a name="VR"><a href="Brick.Types.Internal.html#VR"><span class="hs-identifier">VR</span></a></a><span> </span><span class="hs-special">{</span><span> </span><a name="vrPosition"><a href="Brick.Types.Internal.html#vrPosition"><span class="hs-identifier">vrPosition</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><a href="Brick.Types.Internal.html#Location"><span class="hs-identifier hs-type">Location</span></a><span>
+</span><a name="line-73"></a><span>       </span><span class="hs-special">,</span><span> </span><a name="vrSize"><a href="Brick.Types.Internal.html#vrSize"><span class="hs-identifier">vrSize</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">DisplayRegion</span><span>
+</span><a name="line-74"></a><span>       </span><span class="hs-special">}</span><span>
+</span><a name="line-75"></a><span>       </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Show</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Eq</span><span class="hs-special">)</span><span>
+</span><a name="line-76"></a><span>
+</span><a name="line-77"></a><span class="hs-comment">-- | Describes the state of a viewport as it appears as its most recent</span><span>
+</span><a name="line-78"></a><span class="hs-comment">-- rendering.</span><span>
+</span><a name="line-79"></a><span class="hs-keyword">data</span><span> </span><a name="Viewport"><a href="Brick.Types.Internal.html#Viewport"><span class="hs-identifier">Viewport</span></a></a><span> </span><span class="hs-glyph">=</span><span>
+</span><a name="line-80"></a><span>    </span><a name="VP"><a href="Brick.Types.Internal.html#VP"><span class="hs-identifier">VP</span></a></a><span> </span><span class="hs-special">{</span><span> </span><a name="_vpLeft"><a href="Brick.Types.Internal.html#_vpLeft"><span class="hs-identifier">_vpLeft</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Int</span><span>
+</span><a name="line-81"></a><span>       </span><span class="hs-comment">-- ^ The column offset of left side of the viewport.</span><span>
+</span><a name="line-82"></a><span>       </span><span class="hs-special">,</span><span> </span><a name="_vpTop"><a href="Brick.Types.Internal.html#_vpTop"><span class="hs-identifier">_vpTop</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Int</span><span>
+</span><a name="line-83"></a><span>       </span><span class="hs-comment">-- ^ The row offset of the top of the viewport.</span><span>
+</span><a name="line-84"></a><span>       </span><span class="hs-special">,</span><span> </span><a name="_vpSize"><a href="Brick.Types.Internal.html#_vpSize"><span class="hs-identifier">_vpSize</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">DisplayRegion</span><span>
+</span><a name="line-85"></a><span>       </span><span class="hs-comment">-- ^ The size of the viewport.</span><span>
+</span><a name="line-86"></a><span>       </span><span class="hs-special">}</span><span>
+</span><a name="line-87"></a><span>       </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-identifier hs-type">Show</span><span>
+</span><a name="line-88"></a><span>
+</span><a name="line-89"></a><span class="hs-comment">-- | The type of viewports that indicates the direction(s) in which a</span><span>
+</span><a name="line-90"></a><span class="hs-comment">-- viewport is scrollable.</span><span>
+</span><a name="line-91"></a><span class="hs-keyword">data</span><span> </span><a name="ViewportType"><a href="Brick.Types.Internal.html#ViewportType"><span class="hs-identifier">ViewportType</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a name="Vertical"><a href="Brick.Types.Internal.html#Vertical"><span class="hs-identifier">Vertical</span></a></a><span>
+</span><a name="line-92"></a><span>                  </span><span class="hs-comment">-- ^ Viewports of this type are scrollable only vertically.</span><span>
+</span><a name="line-93"></a><span>                  </span><span class="hs-glyph">|</span><span> </span><a name="Horizontal"><a href="Brick.Types.Internal.html#Horizontal"><span class="hs-identifier">Horizontal</span></a></a><span>
+</span><a name="line-94"></a><span>                  </span><span class="hs-comment">-- ^ Viewports of this type are scrollable only horizontally.</span><span>
+</span><a name="line-95"></a><span>                  </span><span class="hs-glyph">|</span><span> </span><a name="Both"><a href="Brick.Types.Internal.html#Both"><span class="hs-identifier">Both</span></a></a><span>
+</span><a name="line-96"></a><span>                  </span><span class="hs-comment">-- ^ Viewports of this type are scrollable vertically and horizontally.</span><span>
+</span><a name="line-97"></a><span>                  </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Show</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Eq</span><span class="hs-special">)</span><span>
+</span><a name="line-98"></a><span>
+</span><a name="line-99"></a><span class="hs-keyword">data</span><span> </span><a name="CacheInvalidateRequest"><a href="Brick.Types.Internal.html#CacheInvalidateRequest"><span class="hs-identifier">CacheInvalidateRequest</span></a></a><span> </span><a name="local-6989586621679114697"><a href="#local-6989586621679114697"><span class="hs-identifier">n</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a name="InvalidateSingle"><a href="Brick.Types.Internal.html#InvalidateSingle"><span class="hs-identifier">InvalidateSingle</span></a></a><span> </span><a href="#local-6989586621679114697"><span class="hs-identifier hs-type">n</span></a><span>
+</span><a name="line-100"></a><span>                              </span><span class="hs-glyph">|</span><span> </span><a name="InvalidateEntire"><a href="Brick.Types.Internal.html#InvalidateEntire"><span class="hs-identifier">InvalidateEntire</span></a></a><span>
+</span><a name="line-101"></a><span>
+</span><a name="line-102"></a><span class="hs-keyword">data</span><span> </span><a name="EventState"><a href="Brick.Types.Internal.html#EventState"><span class="hs-identifier">EventState</span></a></a><span> </span><a name="local-6989586621679114696"><a href="#local-6989586621679114696"><span class="hs-identifier">n</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a name="ES"><a href="Brick.Types.Internal.html#ES"><span class="hs-identifier">ES</span></a></a><span> </span><span class="hs-special">{</span><span> </span><a name="esScrollRequests"><a href="Brick.Types.Internal.html#esScrollRequests"><span class="hs-identifier">esScrollRequests</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><a href="#local-6989586621679114696"><span class="hs-identifier hs-type">n</span></a><span class="hs-special">,</span><span> </span><a href="Brick.Types.Internal.html#ScrollRequest"><span class="hs-identifier hs-type">ScrollRequest</span></a><span class="hs-special">)</span><span class="hs-special">]</span><span>
+</span><a name="line-103"></a><span>                       </span><span class="hs-special">,</span><span> </span><a name="cacheInvalidateRequests"><a href="Brick.Types.Internal.html#cacheInvalidateRequests"><span class="hs-identifier">cacheInvalidateRequests</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><a href="Brick.Types.Internal.html#CacheInvalidateRequest"><span class="hs-identifier hs-type">CacheInvalidateRequest</span></a><span> </span><a href="#local-6989586621679114696"><span class="hs-identifier hs-type">n</span></a><span class="hs-special">]</span><span>
+</span><a name="line-104"></a><span>                       </span><span class="hs-special">}</span><span>
+</span><a name="line-105"></a><span>
+</span><a name="line-106"></a><span class="hs-comment">-- | An extent of a named area: its size, location, and origin.</span><span>
+</span><a name="line-107"></a><span class="hs-keyword">data</span><span> </span><a name="Extent"><a href="Brick.Types.Internal.html#Extent"><span class="hs-identifier">Extent</span></a></a><span> </span><a name="local-6989586621679114695"><a href="#local-6989586621679114695"><span class="hs-identifier">n</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a name="Extent"><a href="Brick.Types.Internal.html#Extent"><span class="hs-identifier">Extent</span></a></a><span> </span><span class="hs-special">{</span><span> </span><a name="extentName"><a href="Brick.Types.Internal.html#extentName"><span class="hs-identifier">extentName</span></a></a><span>      </span><span class="hs-glyph">::</span><span> </span><a href="#local-6989586621679114695"><span class="hs-identifier hs-type">n</span></a><span>
+</span><a name="line-108"></a><span>                       </span><span class="hs-special">,</span><span> </span><a name="extentUpperLeft"><a href="Brick.Types.Internal.html#extentUpperLeft"><span class="hs-identifier">extentUpperLeft</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><a href="Brick.Types.Internal.html#Location"><span class="hs-identifier hs-type">Location</span></a><span>
+</span><a name="line-109"></a><span>                       </span><span class="hs-special">,</span><span> </span><a name="extentSize"><a href="Brick.Types.Internal.html#extentSize"><span class="hs-identifier">extentSize</span></a></a><span>      </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Int</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Int</span><span class="hs-special">)</span><span>
+</span><a name="line-110"></a><span>                       </span><span class="hs-special">,</span><span> </span><a name="extentOffset"><a href="Brick.Types.Internal.html#extentOffset"><span class="hs-identifier">extentOffset</span></a></a><span>    </span><span class="hs-glyph">::</span><span> </span><a href="Brick.Types.Internal.html#Location"><span class="hs-identifier hs-type">Location</span></a><span>
+</span><a name="line-111"></a><span>                       </span><span class="hs-special">}</span><span>
+</span><a name="line-112"></a><span>              </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Show</span><span class="hs-special">)</span><span>
+</span><a name="line-113"></a><span>
+</span><a name="line-114"></a><span class="hs-keyword">data</span><span> </span><a name="EventRO"><a href="Brick.Types.Internal.html#EventRO"><span class="hs-identifier">EventRO</span></a></a><span> </span><a name="local-6989586621679114694"><a href="#local-6989586621679114694"><span class="hs-identifier">n</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a name="EventRO"><a href="Brick.Types.Internal.html#EventRO"><span class="hs-identifier">EventRO</span></a></a><span> </span><span class="hs-special">{</span><span> </span><a name="eventViewportMap"><a href="Brick.Types.Internal.html#eventViewportMap"><span class="hs-identifier">eventViewportMap</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">M</span><span class="hs-operator hs-type">.</span><span class="hs-identifier hs-type">Map</span><span> </span><a href="#local-6989586621679114694"><span class="hs-identifier hs-type">n</span></a><span> </span><a href="Brick.Types.Internal.html#Viewport"><span class="hs-identifier hs-type">Viewport</span></a><span>
+</span><a name="line-115"></a><span>                         </span><span class="hs-special">,</span><span> </span><a name="eventVtyHandle"><a href="Brick.Types.Internal.html#eventVtyHandle"><span class="hs-identifier">eventVtyHandle</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Maybe</span><span> </span><span class="hs-identifier hs-type">Vty</span><span>
+</span><a name="line-116"></a><span>                         </span><span class="hs-special">,</span><span> </span><a name="latestExtents"><a href="Brick.Types.Internal.html#latestExtents"><span class="hs-identifier">latestExtents</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><a href="Brick.Types.Internal.html#Extent"><span class="hs-identifier hs-type">Extent</span></a><span> </span><a href="#local-6989586621679114694"><span class="hs-identifier hs-type">n</span></a><span class="hs-special">]</span><span>
+</span><a name="line-117"></a><span>                         </span><span class="hs-special">}</span><span>
+</span><a name="line-118"></a><span>
+</span><a name="line-119"></a><span class="hs-comment">-- | The type of actions to take upon completion of an event handler.</span><span>
+</span><a name="line-120"></a><span class="hs-keyword">data</span><span> </span><a name="Next"><a href="Brick.Types.Internal.html#Next"><span class="hs-identifier">Next</span></a></a><span> </span><a name="local-6989586621679114693"><a href="#local-6989586621679114693"><span class="hs-identifier">a</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a name="Continue"><a href="Brick.Types.Internal.html#Continue"><span class="hs-identifier">Continue</span></a></a><span> </span><a href="#local-6989586621679114693"><span class="hs-identifier hs-type">a</span></a><span>
+</span><a name="line-121"></a><span>            </span><span class="hs-glyph">|</span><span> </span><a name="SuspendAndResume"><a href="Brick.Types.Internal.html#SuspendAndResume"><span class="hs-identifier">SuspendAndResume</span></a></a><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">IO</span><span> </span><a href="#local-6989586621679114693"><span class="hs-identifier hs-type">a</span></a><span class="hs-special">)</span><span>
+</span><a name="line-122"></a><span>            </span><span class="hs-glyph">|</span><span> </span><a name="Halt"><a href="Brick.Types.Internal.html#Halt"><span class="hs-identifier">Halt</span></a></a><span> </span><a href="#local-6989586621679114693"><span class="hs-identifier hs-type">a</span></a><span>
+</span><a name="line-123"></a><span>            </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-identifier hs-type">Functor</span><span>
+</span><a name="line-124"></a><span>
+</span><a name="line-125"></a><span class="hs-comment">-- | Scrolling direction.</span><span>
+</span><a name="line-126"></a><span class="hs-keyword">data</span><span> </span><a name="Direction"><a href="Brick.Types.Internal.html#Direction"><span class="hs-identifier">Direction</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a name="Up"><a href="Brick.Types.Internal.html#Up"><span class="hs-identifier">Up</span></a></a><span>
+</span><a name="line-127"></a><span>               </span><span class="hs-comment">-- ^ Up/left</span><span>
+</span><a name="line-128"></a><span>               </span><span class="hs-glyph">|</span><span> </span><a name="Down"><a href="Brick.Types.Internal.html#Down"><span class="hs-identifier">Down</span></a></a><span>
+</span><a name="line-129"></a><span>               </span><span class="hs-comment">-- ^ Down/right</span><span>
+</span><a name="line-130"></a><span>               </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Show</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Eq</span><span class="hs-special">)</span><span>
+</span><a name="line-131"></a><span>
+</span><a name="line-132"></a><span class="hs-comment">-- | A terminal screen location.</span><span>
+</span><a name="line-133"></a><span class="hs-keyword">data</span><span> </span><a name="Location"><a href="Brick.Types.Internal.html#Location"><span class="hs-identifier">Location</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a name="Location"><a href="Brick.Types.Internal.html#Location"><span class="hs-identifier">Location</span></a></a><span> </span><span class="hs-special">{</span><span> </span><a name="loc"><a href="Brick.Types.Internal.html#loc"><span class="hs-identifier">loc</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Int</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Int</span><span class="hs-special">)</span><span>
+</span><a name="line-134"></a><span>                         </span><span class="hs-comment">-- ^ (Column, Row)</span><span>
+</span><a name="line-135"></a><span>                         </span><span class="hs-special">}</span><span>
+</span><a name="line-136"></a><span>                </span><span class="hs-keyword">deriving</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Show</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Eq</span><span class="hs-special">)</span><span>
+</span><a name="line-137"></a><span>
+</span><a name="line-138"></a><span class="hs-identifier hs-var">suffixLenses</span><span> </span><span class="hs-char">''Location
+
+instance Field1 Location Location Int Int where
+    _1 = locL._1
+
+instance Field2 Location Location Int Int where
+    _2 = locL._2
+
+-- | The class of types that behave like terminal locations.
+class TerminalLocation a where
+    -- | Get the column out of the value
+    locationColumnL :: Lens' a Int
+    locationColumn :: a -&gt; Int
+
+    -- | Get the row out of the value
+    locationRowL :: Lens' a Int
+    locationRow :: a -&gt; Int
+
+instance TerminalLocation Location where
+    locationColumnL = _1
+    locationColumn (Location t) = fst t
+    locationRowL = _2
+    locationRow (Location t) = snd t
+
+-- | The origin (upper-left corner).
+origin :: Location
+origin = Location (0, 0)
+
+instance Monoid Location where
+    mempty = origin
+    mappend (Location (w1, h1)) (Location (w2, h2)) = Location (w1+w2, h1+h2)
+
+-- | A cursor location.  These are returned by the rendering process.
+data CursorLocation n =
+    CursorLocation { cursorLocation :: !Location
+                   -- ^ The location
+                   , cursorLocationName :: !(Maybe n)
+                   -- ^ The name of the widget associated with the location
+                   }
+                   deriving Show
+
+-- | The type of result returned by a widget's rendering function. The
+-- result provides the image, cursor positions, and visibility requests
+-- that resulted from the rendering process.
+data Result n =
+    Result { image :: Image
+           -- ^ The final rendered image for a widget
+           , cursors :: [CursorLocation n]
+           -- ^ The list of reported cursor positions for the
+           -- application to choose from
+           , visibilityRequests :: [VisibilityRequest]
+           -- ^ The list of visibility requests made by widgets rendered
+           -- while rendering this one (used by viewports)
+           , extents :: [Extent n]
+           }
+           deriving Show
+
+suffixLenses ''Result
+
+emptyResult :: Result n
+emptyResult = Result emptyImage [] [] []
+
+-- | The type of events.
+data BrickEvent n e = VtyEvent Event
+                    -- ^ The event was a Vty event.
+                    | AppEvent e
+                    -- ^ The event was an application event.
+                    | MouseDown n Button [Modifier] Location
+                    -- ^ A mouse-down event on the specified region was
+                    -- received.
+                    | MouseUp n (Maybe Button) Location
+                    -- ^ A mouse-up event on the specified region was
+                    -- received.
+                    deriving (Show, Eq)
+
+data RenderState n =
+    RS { viewportMap :: M.Map n Viewport
+       , rsScrollRequests :: [(n, ScrollRequest)]
+       , observedNames :: !(S.Set n)
+       , renderCache :: M.Map n (Result n)
+       , clickableNames :: [n]
+       }
+
+-- | The rendering context. This tells widgets how to render: how much
+-- space they have in which to render, which attribute they should use
+-- to render, which bordering style should be used, and the attribute map
+-- available for rendering.
+data Context =
+    Context { ctxAttrName :: AttrName
+            , availWidth :: Int
+            , availHeight :: Int
+            , ctxBorderStyle :: BorderStyle
+            , ctxAttrMap :: AttrMap
+            }
+            deriving Show
+
+suffixLenses ''RenderState
+suffixLenses ''VisibilityRequest
+suffixLenses ''CursorLocation
+makeLenses ''Viewport
+</span></pre></body></html>

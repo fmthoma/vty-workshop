@@ -1,0 +1,895 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">{-| The core functionality for the 'Proxy' monad transformer
+
+    Read &quot;Pipes.Tutorial&quot; if you want a beginners tutorial explaining how to use
+    this library.  The documentation in this module targets more advanced users
+    who want to understand the theory behind this library.
+
+    This module is not exported by default, and I recommend you use the
+    unidirectional operations exported by the &quot;Pipes&quot; module if you can.  You
+    should only use this module if you require advanced features like:
+
+    * bidirectional communication, or:
+
+    * push-based 'Pipe's.
+-}</span><span>
+</span><a name="line-15"></a><span>
+</span><a name="line-16"></a><span class="hs-pragma">{-# LANGUAGE RankNTypes, Trustworthy #-}</span><span>
+</span><a name="line-17"></a><span>
+</span><a name="line-18"></a><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Pipes</span><span class="hs-operator">.</span><span class="hs-identifier">Core</span><span> </span><span class="hs-special">(</span><span>
+</span><a name="line-19"></a><span>    </span><span class="hs-comment">-- * Proxy Monad Transformer</span><span>
+</span><a name="line-20"></a><span>    </span><span class="hs-comment">-- $proxy</span><span>
+</span><a name="line-21"></a><span>      </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span>
+</span><a name="line-22"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Pipes.Core.html#runEffect"><span class="hs-identifier hs-var">runEffect</span></a><span>
+</span><a name="line-23"></a><span>
+</span><a name="line-24"></a><span>    </span><span class="hs-comment">-- * Categories</span><span>
+</span><a name="line-25"></a><span>    </span><span class="hs-comment">-- $categories</span><span>
+</span><a name="line-26"></a><span>
+</span><a name="line-27"></a><span>    </span><span class="hs-comment">-- ** Respond</span><span>
+</span><a name="line-28"></a><span>    </span><span class="hs-comment">-- $respond</span><span>
+</span><a name="line-29"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Pipes.Core.html#respond"><span class="hs-identifier hs-var">respond</span></a><span>
+</span><a name="line-30"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><a href="Pipes.Core.html#%2F%3E%2F"><span class="hs-operator hs-var">/&gt;/</span></a><span class="hs-special">)</span><span>
+</span><a name="line-31"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><a href="Pipes.Core.html#%2F%2F%3E"><span class="hs-operator hs-var">//&gt;</span></a><span class="hs-special">)</span><span>
+</span><a name="line-32"></a><span>
+</span><a name="line-33"></a><span>    </span><span class="hs-comment">-- ** Request</span><span>
+</span><a name="line-34"></a><span>    </span><span class="hs-comment">-- $request</span><span>
+</span><a name="line-35"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Pipes.Core.html#request"><span class="hs-identifier hs-var">request</span></a><span>
+</span><a name="line-36"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><a href="Pipes.Core.html#%5C%3E%5C"><span class="hs-operator hs-var">\&gt;\</span></a><span class="hs-special">)</span><span>
+</span><a name="line-37"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><a href="Pipes.Core.html#%3E%5C%5C"><span class="hs-operator hs-var">&gt;\\</span></a><span class="hs-special">)</span><span>
+</span><a name="line-38"></a><span>
+</span><a name="line-39"></a><span>    </span><span class="hs-comment">-- ** Push</span><span>
+</span><a name="line-40"></a><span>    </span><span class="hs-comment">-- $push</span><span>
+</span><a name="line-41"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Pipes.Core.html#push"><span class="hs-identifier hs-var">push</span></a><span>
+</span><a name="line-42"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><a href="Pipes.Core.html#%3E~%3E"><span class="hs-operator hs-var">&gt;~&gt;</span></a><span class="hs-special">)</span><span>
+</span><a name="line-43"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><a href="Pipes.Core.html#%3E%3E~"><span class="hs-operator hs-var">&gt;&gt;~</span></a><span class="hs-special">)</span><span>
+</span><a name="line-44"></a><span>
+</span><a name="line-45"></a><span>    </span><span class="hs-comment">-- ** Pull</span><span>
+</span><a name="line-46"></a><span>    </span><span class="hs-comment">-- $pull</span><span>
+</span><a name="line-47"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Pipes.Core.html#pull"><span class="hs-identifier hs-var">pull</span></a><span>
+</span><a name="line-48"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><a href="Pipes.Core.html#%3E%2B%3E"><span class="hs-operator hs-var">&gt;+&gt;</span></a><span class="hs-special">)</span><span>
+</span><a name="line-49"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><a href="Pipes.Core.html#%2B%3E%3E"><span class="hs-operator hs-var">+&gt;&gt;</span></a><span class="hs-special">)</span><span>
+</span><a name="line-50"></a><span>
+</span><a name="line-51"></a><span>    </span><span class="hs-comment">-- ** Reflect</span><span>
+</span><a name="line-52"></a><span>    </span><span class="hs-comment">-- $reflect</span><span>
+</span><a name="line-53"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Pipes.Core.html#reflect"><span class="hs-identifier hs-var">reflect</span></a><span>
+</span><a name="line-54"></a><span>
+</span><a name="line-55"></a><span>    </span><span class="hs-comment">-- * Concrete Type Synonyms</span><span>
+</span><a name="line-56"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Pipes.Internal.html#X"><span class="hs-identifier hs-type">X</span></a><span>
+</span><a name="line-57"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Pipes.Core.html#Effect"><span class="hs-identifier hs-type">Effect</span></a><span>
+</span><a name="line-58"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Pipes.Core.html#Producer"><span class="hs-identifier hs-type">Producer</span></a><span>
+</span><a name="line-59"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Pipes.Core.html#Pipe"><span class="hs-identifier hs-type">Pipe</span></a><span>
+</span><a name="line-60"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Pipes.Core.html#Consumer"><span class="hs-identifier hs-type">Consumer</span></a><span>
+</span><a name="line-61"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Pipes.Core.html#Client"><span class="hs-identifier hs-type">Client</span></a><span>
+</span><a name="line-62"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Pipes.Core.html#Server"><span class="hs-identifier hs-type">Server</span></a><span>
+</span><a name="line-63"></a><span>
+</span><a name="line-64"></a><span>    </span><span class="hs-comment">-- * Polymorphic Type Synonyms</span><span>
+</span><a name="line-65"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Pipes.Core.html#Effect%27"><span class="hs-identifier hs-type">Effect'</span></a><span>
+</span><a name="line-66"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Pipes.Core.html#Producer%27"><span class="hs-identifier hs-type">Producer'</span></a><span>
+</span><a name="line-67"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Pipes.Core.html#Consumer%27"><span class="hs-identifier hs-type">Consumer'</span></a><span>
+</span><a name="line-68"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Pipes.Core.html#Client%27"><span class="hs-identifier hs-type">Client'</span></a><span>
+</span><a name="line-69"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Pipes.Core.html#Server%27"><span class="hs-identifier hs-type">Server'</span></a><span>
+</span><a name="line-70"></a><span>
+</span><a name="line-71"></a><span>    </span><span class="hs-comment">-- * Flipped operators</span><span>
+</span><a name="line-72"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><a href="Pipes.Core.html#%5C%3C%5C"><span class="hs-operator hs-var">\&lt;\</span></a><span class="hs-special">)</span><span>
+</span><a name="line-73"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><a href="Pipes.Core.html#%2F%3C%2F"><span class="hs-operator hs-var">/&lt;/</span></a><span class="hs-special">)</span><span>
+</span><a name="line-74"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><a href="Pipes.Core.html#%3C~%3C"><span class="hs-operator hs-var">&lt;~&lt;</span></a><span class="hs-special">)</span><span>
+</span><a name="line-75"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><a href="Pipes.Core.html#~%3C%3C"><span class="hs-operator hs-var">~&lt;&lt;</span></a><span class="hs-special">)</span><span>
+</span><a name="line-76"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><a href="Pipes.Core.html#%3C%2B%3C"><span class="hs-operator hs-var">&lt;+&lt;</span></a><span class="hs-special">)</span><span>
+</span><a name="line-77"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><a href="Pipes.Core.html#%3C%5C%5C"><span class="hs-operator hs-var">&lt;\\</span></a><span class="hs-special">)</span><span>
+</span><a name="line-78"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><a href="Pipes.Core.html#%2F%2F%3C"><span class="hs-operator hs-var">//&lt;</span></a><span class="hs-special">)</span><span>
+</span><a name="line-79"></a><span>    </span><span class="hs-special">,</span><span> </span><span class="hs-special">(</span><a href="Pipes.Core.html#%3C%3C%2B"><span class="hs-operator hs-var">&lt;&lt;+</span></a><span class="hs-special">)</span><span>
+</span><a name="line-80"></a><span>
+</span><a name="line-81"></a><span>    </span><span class="hs-comment">-- * Re-exports</span><span>
+</span><a name="line-82"></a><span>    </span><span class="hs-special">,</span><span> </span><a href="Pipes.Internal.html#closed"><span class="hs-identifier hs-var">closed</span></a><span>
+</span><a name="line-83"></a><span>    </span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><a name="line-84"></a><span>
+</span><a name="line-85"></a><span class="hs-keyword">import</span><span> </span><a href="Pipes.Internal.html"><span class="hs-identifier">Pipes</span><span class="hs-operator">.</span><span class="hs-identifier">Internal</span></a><span> </span><span class="hs-special">(</span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><a href="Pipes.Internal.html#X"><span class="hs-identifier hs-type">X</span></a><span class="hs-special">,</span><span> </span><a href="Pipes.Internal.html#closed"><span class="hs-identifier hs-var">closed</span></a><span class="hs-special">)</span><span>
+</span><a name="line-86"></a><span>
+</span><a name="line-87"></a><span class="hs-comment">{- $proxy
+    Diagrammatically, you can think of a 'Proxy' as having the following shape:
+
+@
+ Upstream | Downstream
+     +---------+
+     |         |
+ a' &lt;==       &lt;== b'
+     |         |
+ a  ==&gt;       ==&gt; b
+     |    |    |
+     +----|----+
+          v
+          r
+@
+
+    You can connect proxies together in five different ways:
+
+    * ('Pipes.&gt;+&gt;'): connect pull-based streams
+
+    * ('Pipes.&gt;~&gt;'): connect push-based streams
+
+    * ('Pipes.\&gt;\'): chain folds
+
+    * ('Pipes./&gt;/'): chain unfolds
+
+    * ('Control.Monad.&gt;=&gt;'): sequence proxies
+
+-}</span><span>
+</span><a name="line-116"></a><span>
+</span><a name="line-117"></a><span class="hs-comment">-- | Run a self-contained 'Effect', converting it back to the base monad</span><span>
+</span><a name="line-118"></a><span class="hs-identifier">runEffect</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058405"><span class="hs-identifier hs-type">m</span></a><span> </span><span class="hs-glyph">=&gt;</span><span> </span><a href="Pipes.Core.html#Effect"><span class="hs-identifier hs-type">Effect</span></a><span> </span><a href="#local-6989586621679058405"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058406"><span class="hs-identifier hs-type">r</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="#local-6989586621679058405"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058406"><span class="hs-identifier hs-type">r</span></a><span>
+</span><a name="line-119"></a><a name="runEffect"><a href="Pipes.Core.html#runEffect"><span class="hs-identifier">runEffect</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="#local-6989586621679058407"><span class="hs-identifier hs-var">go</span></a><span>
+</span><a name="line-120"></a><span>  </span><span class="hs-keyword">where</span><span>
+</span><a name="line-121"></a><span>    </span><a name="local-6989586621679058407"><a href="#local-6989586621679058407"><span class="hs-identifier">go</span></a></a><span> </span><a name="local-6989586621679058408"><a href="#local-6989586621679058408"><span class="hs-identifier">p</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><a href="#local-6989586621679058408"><span class="hs-identifier hs-var">p</span></a><span> </span><span class="hs-keyword">of</span><span>
+</span><a name="line-122"></a><span>        </span><a href="Pipes.Internal.html#Request"><span class="hs-identifier hs-var">Request</span></a><span> </span><a name="local-6989586621679058409"><a href="#local-6989586621679058409"><span class="hs-identifier">v</span></a></a><span> </span><span class="hs-identifier">_</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#closed"><span class="hs-identifier hs-var">closed</span></a><span> </span><a href="#local-6989586621679058409"><span class="hs-identifier hs-var">v</span></a><span>
+</span><a name="line-123"></a><span>        </span><a href="Pipes.Internal.html#Respond"><span class="hs-identifier hs-var">Respond</span></a><span> </span><a name="local-6989586621679058410"><a href="#local-6989586621679058410"><span class="hs-identifier">v</span></a></a><span> </span><span class="hs-identifier">_</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#closed"><span class="hs-identifier hs-var">closed</span></a><span> </span><a href="#local-6989586621679058410"><span class="hs-identifier hs-var">v</span></a><span>
+</span><a name="line-124"></a><span>        </span><a href="Pipes.Internal.html#M"><span class="hs-identifier hs-var">M</span></a><span>       </span><a name="local-6989586621679058411"><a href="#local-6989586621679058411"><span class="hs-identifier">m</span></a></a><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><a href="#local-6989586621679058411"><span class="hs-identifier hs-var">m</span></a><span> </span><span class="hs-operator hs-var">&gt;&gt;=</span><span> </span><a href="#local-6989586621679058407"><span class="hs-identifier hs-var">go</span></a><span>
+</span><a name="line-125"></a><span>        </span><a href="Pipes.Internal.html#Pure"><span class="hs-identifier hs-var">Pure</span></a><span>    </span><a name="local-6989586621679058412"><a href="#local-6989586621679058412"><span class="hs-identifier">r</span></a></a><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-var">return</span><span> </span><a href="#local-6989586621679058412"><span class="hs-identifier hs-var">r</span></a><span>
+</span><a name="line-126"></a><span class="hs-pragma">{-# INLINABLE runEffect #-}</span><span>
+</span><a name="line-127"></a><span>
+</span><a name="line-128"></a><span class="hs-comment">{- * Keep proxy composition lower in precedence than function composition, which
+     is 9 at the time of of this comment, so that users can write things like:
+
+
+&gt; lift . k &gt;+&gt; p
+&gt;
+&gt; hoist f . k &gt;+&gt; p
+
+   * Keep the priorities different so that users can mix composition operators
+     like:
+
+&gt; up \&gt;\ p /&gt;/ dn
+&gt;
+&gt; up &gt;~&gt; p &gt;+&gt; dn
+
+   * Keep 'request' and 'respond' composition lower in precedence than 'pull'
+     and 'push' composition, so that users can do:
+
+&gt; read \&gt;\ pull &gt;+&gt; writer
+
+   * I arbitrarily choose a lower priority for downstream operators so that lazy
+     pull-based computations need not evaluate upstream stages unless absolutely
+     necessary.
+-}</span><span>
+</span><a name="line-152"></a><span class="hs-keyword">infixl</span><span> </span><span class="hs-number">3</span><span> </span><span class="hs-operator">//&gt;</span><span>
+</span><a name="line-153"></a><span class="hs-keyword">infixr</span><span> </span><span class="hs-number">3</span><span> </span><span class="hs-operator">&lt;\\</span><span>      </span><span class="hs-comment">-- GHC will raise a parse error if either of these lines ends</span><span>
+</span><a name="line-154"></a><span class="hs-keyword">infixr</span><span> </span><span class="hs-number">4</span><span> </span><span class="hs-operator">/&gt;/</span><span class="hs-special">,</span><span> </span><span class="hs-operator">&gt;\\</span><span> </span><span class="hs-comment">-- with '\', which is why this comment is here</span><span>
+</span><a name="line-155"></a><span class="hs-keyword">infixl</span><span> </span><span class="hs-number">4</span><span> </span><span class="hs-operator">\&lt;\</span><span class="hs-special">,</span><span> </span><span class="hs-operator">//&lt;</span><span>
+</span><a name="line-156"></a><span class="hs-keyword">infixl</span><span> </span><span class="hs-number">5</span><span> </span><span class="hs-operator">\&gt;\</span><span>      </span><span class="hs-comment">-- Same thing here</span><span>
+</span><a name="line-157"></a><span class="hs-keyword">infixr</span><span> </span><span class="hs-number">5</span><span> </span><span class="hs-operator">/&lt;/</span><span>
+</span><a name="line-158"></a><span class="hs-keyword">infixl</span><span> </span><span class="hs-number">6</span><span> </span><span class="hs-operator">&lt;&lt;+</span><span>
+</span><a name="line-159"></a><span class="hs-keyword">infixr</span><span> </span><span class="hs-number">6</span><span> </span><span class="hs-operator">+&gt;&gt;</span><span>
+</span><a name="line-160"></a><span class="hs-keyword">infixl</span><span> </span><span class="hs-number">7</span><span> </span><span class="hs-operator">&gt;+&gt;</span><span class="hs-special">,</span><span> </span><span class="hs-operator">&gt;&gt;~</span><span>
+</span><a name="line-161"></a><span class="hs-keyword">infixr</span><span> </span><span class="hs-number">7</span><span> </span><span class="hs-operator">&lt;+&lt;</span><span class="hs-special">,</span><span> </span><span class="hs-operator">~&lt;&lt;</span><span>
+</span><a name="line-162"></a><span class="hs-keyword">infixl</span><span> </span><span class="hs-number">8</span><span> </span><span class="hs-operator">&lt;~&lt;</span><span>
+</span><a name="line-163"></a><span class="hs-keyword">infixr</span><span> </span><span class="hs-number">8</span><span> </span><span class="hs-operator">&gt;~&gt;</span><span>
+</span><a name="line-164"></a><span>
+</span><a name="line-165"></a><span class="hs-comment">{- $categories
+    A 'Control.Category.Category' is a set of components that you can connect
+    with a composition operator, ('Control.Category..'), that has an identity,
+    'Control.Category.id'.  The ('Control.Category..') and 'Control.Category.id'
+    must satisfy the following three 'Control.Category.Category' laws:
+
+@
+\-\- Left identity
+'Control.Category.id' 'Control.Category..' f = f
+
+\-\- Right identity
+f 'Control.Category..' 'Control.Category.id' = f
+
+\-\- Associativity
+(f 'Control.Category..' g) 'Control.Category..' h = f 'Control.Category..' (g 'Control.Category..' h)
+@
+
+    The 'Proxy' type sits at the intersection of five separate categories, four
+    of which are named after their identity:
+
+@
+                     Identity   | Composition |  Point-ful
+                  +-------------+-------------+-------------+
+ respond category |   'respond'   |     '/&gt;/'     |     '//&gt;'     |
+ request category |   'request'   |     '\&gt;\'     |     '&gt;\\'     |
+    push category |   'push'      |     '&gt;~&gt;'     |     '&gt;&gt;~'     |
+    pull category |   'pull'      |     '&gt;+&gt;'     |     '+&gt;&gt;'     |
+ Kleisli category |   'return'    |     'Control.Monad.&gt;=&gt;'     |     '&gt;&gt;='     |
+                  +-------------+-------------+-------------+
+@
+
+    Each composition operator has a \&quot;point-ful\&quot; version, analogous to how
+    ('&gt;&gt;=') is the point-ful version of ('Control.Monad.&gt;=&gt;').  For example,
+    ('//&gt;') is the point-ful version of ('/&gt;/').  The convention is that the
+    odd character out faces the argument that is a function.
+-}</span><span>
+</span><a name="line-201"></a><span>
+</span><a name="line-202"></a><span class="hs-comment">{- $respond
+    The 'respond' category closely corresponds to the generator design pattern.
+
+    The 'respond' category obeys the category laws, where 'respond' is the
+    identity and ('/&gt;/') is composition:
+
+@
+\-\- Left identity
+'respond' '/&gt;/' f = f
+
+\-\- Right identity
+f '/&gt;/' 'respond' = f
+
+\-\- Associativity
+(f '/&gt;/' g) '/&gt;/' h = f '/&gt;/' (g '/&gt;/' h)
+@
+
+#respond-diagram#
+
+    The following diagrams show the flow of information:
+
+@
+'respond' :: 'Monad' m
+       =&gt;  a -&gt; 'Proxy' x' x a' a m a'
+
+\          a
+          |
+     +----|----+
+     |    |    |
+ x' &lt;==   \\ /==== a'
+     |     X   |
+ x  ==&gt;   / \\===&gt; a
+     |    |    |
+     +----|----+
+          v
+          a'
+
+('/&gt;/') :: 'Monad' m
+      =&gt; (a -&gt; 'Proxy' x' x b' b m a')
+      -&gt; (b -&gt; 'Proxy' x' x c' c m b')
+      -&gt; (a -&gt; 'Proxy' x' x c' c m a')
+
+\          a                   /===&gt; b                      a
+          |                  /      |                      |
+     +----|----+            /  +----|----+            +----|----+
+     |    v    |           /   |    v    |            |    v    |
+ x' &lt;==       &lt;== b' &lt;==\\ / x'&lt;==       &lt;== c'    x' &lt;==       &lt;== c'
+     |    f    |         X     |    g    |     =      | f '/&gt;/' g |
+ x  ==&gt;       ==&gt; b  ===/ \\ x ==&gt;       ==&gt; c     x  ==&gt;       ==&gt; c
+     |    |    |           \\   |    |    |            |    |    |
+     +----|----+            \\  +----|----+            +----|----+
+          v                  \\      v                      v
+          a'                  \\==== b'                     a'
+
+('//&gt;') :: 'Monad' m
+      =&gt; 'Proxy' x' x b' b m a'
+      -&gt; (b -&gt; 'Proxy' x' x c' c m b')
+      -&gt; 'Proxy' x' x c' c m a'
+
+\                              /===&gt; b
+                             /      |
+     +---------+            /  +----|----+            +---------+
+     |         |           /   |    v    |            |         |
+ x' &lt;==       &lt;== b' &lt;==\\ / x'&lt;==       &lt;== c'    x' &lt;==       &lt;== c'
+     |    f    |         X     |    g    |     =      | f '//&gt;' g |
+ x  ==&gt;       ==&gt; b  ===/ \\ x ==&gt;       ==&gt; c     x  ==&gt;       ==&gt; c'
+     |    |    |           \\   |    |    |            |    |    |
+     +----|----+            \\  +----|----+            +----|----+
+          v                  \\      v                      v
+          a'                  \\==== b'                     a'
+@
+
+-}</span><span>
+</span><a name="line-275"></a><span>
+</span><a name="line-276"></a><span class="hs-comment">{-| Send a value of type @a@ downstream and block waiting for a reply of type
+    @a'@
+
+    'respond' is the identity of the respond category.
+-}</span><span>
+</span><a name="line-281"></a><span class="hs-identifier">respond</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058400"><span class="hs-identifier hs-type">m</span></a><span> </span><span class="hs-glyph">=&gt;</span><span> </span><a href="#local-6989586621679058401"><span class="hs-identifier hs-type">a</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058402"><span class="hs-identifier hs-type">x'</span></a><span> </span><a href="#local-6989586621679058403"><span class="hs-identifier hs-type">x</span></a><span> </span><a href="#local-6989586621679058404"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058401"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058400"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058404"><span class="hs-identifier hs-type">a'</span></a><span>
+</span><a name="line-282"></a><a name="respond"><a href="Pipes.Core.html#respond"><span class="hs-identifier">respond</span></a></a><span> </span><a name="local-6989586621679058413"><a href="#local-6989586621679058413"><span class="hs-identifier">a</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="Pipes.Internal.html#Respond"><span class="hs-identifier hs-var">Respond</span></a><span> </span><a href="#local-6989586621679058413"><span class="hs-identifier hs-var">a</span></a><span> </span><a href="Pipes.Internal.html#Pure"><span class="hs-identifier hs-var">Pure</span></a><span>
+</span><a name="line-283"></a><span class="hs-pragma">{-# INLINABLE [1] respond #-}</span><span>
+</span><a name="line-284"></a><span>
+</span><a name="line-285"></a><span class="hs-comment">{-| Compose two unfolds, creating a new unfold
+
+@
+(f '/&gt;/' g) x = f x '//&gt;' g
+@
+
+    ('/&gt;/') is the composition operator of the respond category.
+-}</span><span>
+</span><a name="line-293"></a><span class="hs-special">(</span><span class="hs-operator">/&gt;/</span><span class="hs-special">)</span><span>
+</span><a name="line-294"></a><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058391"><span class="hs-identifier hs-type">m</span></a><span>
+</span><a name="line-295"></a><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058392"><span class="hs-identifier hs-type">a</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058393"><span class="hs-identifier hs-type">x'</span></a><span> </span><a href="#local-6989586621679058394"><span class="hs-identifier hs-type">x</span></a><span> </span><a href="#local-6989586621679058395"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058396"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058391"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058397"><span class="hs-identifier hs-type">a'</span></a><span class="hs-special">)</span><span>
+</span><a name="line-296"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-297"></a><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058396"><span class="hs-identifier hs-type">b</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058393"><span class="hs-identifier hs-type">x'</span></a><span> </span><a href="#local-6989586621679058394"><span class="hs-identifier hs-type">x</span></a><span> </span><a href="#local-6989586621679058398"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058399"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058391"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058395"><span class="hs-identifier hs-type">b'</span></a><span class="hs-special">)</span><span>
+</span><a name="line-298"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-299"></a><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058392"><span class="hs-identifier hs-type">a</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058393"><span class="hs-identifier hs-type">x'</span></a><span> </span><a href="#local-6989586621679058394"><span class="hs-identifier hs-type">x</span></a><span> </span><a href="#local-6989586621679058398"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058399"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058391"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058397"><span class="hs-identifier hs-type">a'</span></a><span class="hs-special">)</span><span>
+</span><a name="line-300"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-301"></a><span class="hs-special">(</span><a name="local-6989586621679058414"><a href="#local-6989586621679058414"><span class="hs-identifier">fa</span></a></a><span> </span><a name="%2F%3E%2F"><a href="Pipes.Core.html#%2F%3E%2F"><span class="hs-operator">/&gt;/</span></a></a><span> </span><a name="local-6989586621679058415"><a href="#local-6989586621679058415"><span class="hs-identifier">fb</span></a></a><span class="hs-special">)</span><span> </span><a name="local-6989586621679058416"><a href="#local-6989586621679058416"><span class="hs-identifier">a</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="#local-6989586621679058414"><span class="hs-identifier hs-var">fa</span></a><span> </span><a href="#local-6989586621679058416"><span class="hs-identifier hs-var">a</span></a><span> </span><a href="Pipes.Core.html#%2F%2F%3E"><span class="hs-operator hs-var">//&gt;</span></a><span> </span><a href="#local-6989586621679058415"><span class="hs-identifier hs-var">fb</span></a><span>
+</span><a name="line-302"></a><span class="hs-pragma">{-# INLINABLE (/&gt;/) #-}</span><span>
+</span><a name="line-303"></a><span>
+</span><a name="line-304"></a><span class="hs-comment">{-| @(p \/\/&gt; f)@ replaces each 'respond' in @p@ with @f@.
+
+    Point-ful version of ('/&gt;/')
+-}</span><span>
+</span><a name="line-308"></a><span class="hs-special">(</span><span class="hs-operator">//&gt;</span><span class="hs-special">)</span><span>
+</span><a name="line-309"></a><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058383"><span class="hs-identifier hs-type">m</span></a><span>
+</span><a name="line-310"></a><span>    </span><span class="hs-glyph">=&gt;</span><span>       </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058384"><span class="hs-identifier hs-type">x'</span></a><span> </span><a href="#local-6989586621679058385"><span class="hs-identifier hs-type">x</span></a><span> </span><a href="#local-6989586621679058386"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058387"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058383"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058388"><span class="hs-identifier hs-type">a'</span></a><span>
+</span><a name="line-311"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-312"></a><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058387"><span class="hs-identifier hs-type">b</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058384"><span class="hs-identifier hs-type">x'</span></a><span> </span><a href="#local-6989586621679058385"><span class="hs-identifier hs-type">x</span></a><span> </span><a href="#local-6989586621679058389"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058390"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058383"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058386"><span class="hs-identifier hs-type">b'</span></a><span class="hs-special">)</span><span>
+</span><a name="line-313"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-314"></a><span>    </span><span class="hs-glyph">-&gt;</span><span>       </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058384"><span class="hs-identifier hs-type">x'</span></a><span> </span><a href="#local-6989586621679058385"><span class="hs-identifier hs-type">x</span></a><span> </span><a href="#local-6989586621679058389"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058390"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058383"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058388"><span class="hs-identifier hs-type">a'</span></a><span>
+</span><a name="line-315"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-316"></a><a name="local-6989586621679058417"><a href="#local-6989586621679058417"><span class="hs-identifier">p0</span></a></a><span> </span><a name="%2F%2F%3E"><a href="Pipes.Core.html#%2F%2F%3E"><span class="hs-operator">//&gt;</span></a></a><span> </span><a name="local-6989586621679058418"><a href="#local-6989586621679058418"><span class="hs-identifier">fb</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="#local-6989586621679058419"><span class="hs-identifier hs-var">go</span></a><span> </span><a href="#local-6989586621679058417"><span class="hs-identifier hs-var">p0</span></a><span>
+</span><a name="line-317"></a><span>  </span><span class="hs-keyword">where</span><span>
+</span><a name="line-318"></a><span>    </span><a name="local-6989586621679058419"><a href="#local-6989586621679058419"><span class="hs-identifier">go</span></a></a><span> </span><a name="local-6989586621679058420"><a href="#local-6989586621679058420"><span class="hs-identifier">p</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><a href="#local-6989586621679058420"><span class="hs-identifier hs-var">p</span></a><span> </span><span class="hs-keyword">of</span><span>
+</span><a name="line-319"></a><span>        </span><a href="Pipes.Internal.html#Request"><span class="hs-identifier hs-var">Request</span></a><span> </span><a name="local-6989586621679058421"><a href="#local-6989586621679058421"><span class="hs-identifier">x'</span></a></a><span> </span><a name="local-6989586621679058422"><a href="#local-6989586621679058422"><span class="hs-identifier">fx</span></a></a><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Request"><span class="hs-identifier hs-var">Request</span></a><span> </span><a href="#local-6989586621679058421"><span class="hs-identifier hs-var">x'</span></a><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><a name="local-6989586621679058423"><a href="#local-6989586621679058423"><span class="hs-identifier">x</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="#local-6989586621679058419"><span class="hs-identifier hs-var">go</span></a><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058422"><span class="hs-identifier hs-var">fx</span></a><span> </span><a href="#local-6989586621679058423"><span class="hs-identifier hs-var">x</span></a><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a name="line-320"></a><span>        </span><a href="Pipes.Internal.html#Respond"><span class="hs-identifier hs-var">Respond</span></a><span> </span><a name="local-6989586621679058424"><a href="#local-6989586621679058424"><span class="hs-identifier">b</span></a></a><span>  </span><a name="local-6989586621679058425"><a href="#local-6989586621679058425"><span class="hs-identifier">fb'</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="#local-6989586621679058418"><span class="hs-identifier hs-var">fb</span></a><span> </span><a href="#local-6989586621679058424"><span class="hs-identifier hs-var">b</span></a><span> </span><span class="hs-operator hs-var">&gt;&gt;=</span><span> </span><span class="hs-glyph">\</span><a name="local-6989586621679058426"><a href="#local-6989586621679058426"><span class="hs-identifier">b'</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="#local-6989586621679058419"><span class="hs-identifier hs-var">go</span></a><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058425"><span class="hs-identifier hs-var">fb'</span></a><span> </span><a href="#local-6989586621679058426"><span class="hs-identifier hs-var">b'</span></a><span class="hs-special">)</span><span>
+</span><a name="line-321"></a><span>        </span><a href="Pipes.Internal.html#M"><span class="hs-identifier hs-var">M</span></a><span>          </span><a name="local-6989586621679058427"><a href="#local-6989586621679058427"><span class="hs-identifier">m</span></a></a><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#M"><span class="hs-identifier hs-var">M</span></a><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058427"><span class="hs-identifier hs-var">m</span></a><span> </span><span class="hs-operator hs-var">&gt;&gt;=</span><span> </span><span class="hs-glyph">\</span><a name="local-6989586621679058428"><a href="#local-6989586621679058428"><span class="hs-identifier">p'</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-var">return</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058419"><span class="hs-identifier hs-var">go</span></a><span> </span><a href="#local-6989586621679058428"><span class="hs-identifier hs-var">p'</span></a><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a name="line-322"></a><span>        </span><a href="Pipes.Internal.html#Pure"><span class="hs-identifier hs-var">Pure</span></a><span>       </span><a name="local-6989586621679058429"><a href="#local-6989586621679058429"><span class="hs-identifier">a</span></a></a><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Pure"><span class="hs-identifier hs-var">Pure</span></a><span> </span><a href="#local-6989586621679058429"><span class="hs-identifier hs-var">a</span></a><span>
+</span><a name="line-323"></a><span class="hs-pragma">{-# INLINE [1] (//&gt;) #-}</span><span>
+</span><a name="line-324"></a><span>
+</span><a name="line-325"></a><span class="hs-pragma">{-# RULES
+    &quot;(Request x' fx ) //&gt; fb&quot; forall x' fx  fb .
+        (Request x' fx ) //&gt; fb = Request x' (\x -&gt; fx x //&gt; fb);
+    &quot;(Respond b  fb') //&gt; fb&quot; forall b  fb' fb .
+        (Respond b  fb') //&gt; fb = fb b &gt;&gt;= \b' -&gt; fb' b' //&gt; fb;
+    &quot;(M          m  ) //&gt; fb&quot; forall    m   fb .
+        (M          m  ) //&gt; fb = M (m &gt;&gt;= \p' -&gt; return (p' //&gt; fb));
+    &quot;(Pure      a   ) //&gt; fb&quot; forall a      fb .
+        (Pure    a     ) //&gt; fb = Pure a;
+  #-}</span><span>
+</span><a name="line-335"></a><span>
+</span><a name="line-336"></a><span class="hs-comment">{- $request
+    The 'request' category closely corresponds to the iteratee design pattern.
+
+    The 'request' category obeys the category laws, where 'request' is the
+    identity and ('\&gt;\') is composition:
+
+@
+-- Left identity
+'request' '\&gt;\' f = f
+
+\-\- Right identity
+f '\&gt;\' 'request' = f
+
+\-\- Associativity
+(f '\&gt;\' g) '\&gt;\' h = f '\&gt;\' (g '\&gt;\' h)
+@
+
+#request-diagram#
+
+    The following diagrams show the flow of information:
+
+@
+'request' :: 'Monad' m
+        =&gt;  a' -&gt; 'Proxy' a' a y' y m a
+
+\          a'
+          |
+     +----|----+
+     |    |    |
+ a' &lt;=====/   &lt;== y'
+     |         |
+ a  ======\\   ==&gt; y
+     |    |    |
+     +----|----+
+          v
+          a
+
+('\&gt;\') :: 'Monad' m
+      =&gt; (b' -&gt; 'Proxy' a' a y' y m b)
+      -&gt; (c' -&gt; 'Proxy' b' b y' y m c)
+      -&gt; (c' -&gt; 'Proxy' a' a y' y m c)
+
+\          b'&lt;=====\\                c'                     c'
+          |        \\               |                      |
+     +----|----+    \\         +----|----+            +----|----+
+     |    v    |     \\        |    v    |            |    v    |
+ a' &lt;==       &lt;== y'  \\== b' &lt;==       &lt;== y'    a' &lt;==       &lt;== y'
+     |    f    |              |    g    |     =      | f '\&gt;\' g |
+ a  ==&gt;       ==&gt; y   /=&gt; b  ==&gt;       ==&gt; y     a  ==&gt;       ==&gt; y
+     |    |    |     /        |    |    |            |    |    |
+     +----|----+    /         +----|----+            +----|----+
+          v        /               v                      v
+          b ======/                c                      c
+
+('&gt;\\') :: Monad m
+      =&gt; (b' -&gt; Proxy a' a y' y m b)
+      -&gt; Proxy b' b y' y m c
+      -&gt; Proxy a' a y' y m c
+
+\          b'&lt;=====\\
+          |        \\
+     +----|----+    \\         +---------+            +---------+
+     |    v    |     \\        |         |            |         |
+ a' &lt;==       &lt;== y'  \\== b' &lt;==       &lt;== y'    a' &lt;==       &lt;== y'
+     |    f    |              |    g    |     =      | f '&gt;\\' g |
+ a  ==&gt;       ==&gt; y   /=&gt; b  ==&gt;       ==&gt; y     a  ==&gt;       ==&gt; y
+     |    |    |     /        |    |    |            |    |    |
+     +----|----+    /         +----|----+            +----|----+
+          v        /               v                      v
+          b ======/                c                      c
+@
+-}</span><span>
+</span><a name="line-408"></a><span>
+</span><a name="line-409"></a><span class="hs-comment">{-| Send a value of type @a'@ upstream and block waiting for a reply of type @a@
+
+    'request' is the identity of the request category.
+-}</span><span>
+</span><a name="line-413"></a><span class="hs-identifier">request</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058378"><span class="hs-identifier hs-type">m</span></a><span> </span><span class="hs-glyph">=&gt;</span><span> </span><a href="#local-6989586621679058379"><span class="hs-identifier hs-type">a'</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058379"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058380"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058381"><span class="hs-identifier hs-type">y'</span></a><span> </span><a href="#local-6989586621679058382"><span class="hs-identifier hs-type">y</span></a><span> </span><a href="#local-6989586621679058378"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058380"><span class="hs-identifier hs-type">a</span></a><span>
+</span><a name="line-414"></a><a name="request"><a href="Pipes.Core.html#request"><span class="hs-identifier">request</span></a></a><span> </span><a name="local-6989586621679058430"><a href="#local-6989586621679058430"><span class="hs-identifier">a'</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="Pipes.Internal.html#Request"><span class="hs-identifier hs-var">Request</span></a><span> </span><a href="#local-6989586621679058430"><span class="hs-identifier hs-var">a'</span></a><span> </span><a href="Pipes.Internal.html#Pure"><span class="hs-identifier hs-var">Pure</span></a><span>
+</span><a name="line-415"></a><span class="hs-pragma">{-# INLINABLE [1] request #-}</span><span>
+</span><a name="line-416"></a><span>
+</span><a name="line-417"></a><span class="hs-comment">{-| Compose two folds, creating a new fold
+
+@
+(f '\&gt;\' g) x = f '&gt;\\' g x
+@
+
+    ('\&gt;\') is the composition operator of the request category.
+-}</span><span>
+</span><a name="line-425"></a><span class="hs-special">(</span><span class="hs-operator">\&gt;\</span><span class="hs-special">)</span><span>
+</span><a name="line-426"></a><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058369"><span class="hs-identifier hs-type">m</span></a><span>
+</span><a name="line-427"></a><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058370"><span class="hs-identifier hs-type">b'</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058371"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058372"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058373"><span class="hs-identifier hs-type">y'</span></a><span> </span><a href="#local-6989586621679058374"><span class="hs-identifier hs-type">y</span></a><span> </span><a href="#local-6989586621679058369"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058375"><span class="hs-identifier hs-type">b</span></a><span class="hs-special">)</span><span>
+</span><a name="line-428"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-429"></a><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058376"><span class="hs-identifier hs-type">c'</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058370"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058375"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058373"><span class="hs-identifier hs-type">y'</span></a><span> </span><a href="#local-6989586621679058374"><span class="hs-identifier hs-type">y</span></a><span> </span><a href="#local-6989586621679058369"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058377"><span class="hs-identifier hs-type">c</span></a><span class="hs-special">)</span><span>
+</span><a name="line-430"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-431"></a><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058376"><span class="hs-identifier hs-type">c'</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058371"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058372"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058373"><span class="hs-identifier hs-type">y'</span></a><span> </span><a href="#local-6989586621679058374"><span class="hs-identifier hs-type">y</span></a><span> </span><a href="#local-6989586621679058369"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058377"><span class="hs-identifier hs-type">c</span></a><span class="hs-special">)</span><span>
+</span><a name="line-432"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-433"></a><span class="hs-special">(</span><a name="local-6989586621679058431"><a href="#local-6989586621679058431"><span class="hs-identifier">fb'</span></a></a><span> </span><a name="%5C%3E%5C"><a href="Pipes.Core.html#%5C%3E%5C"><span class="hs-operator">\&gt;\</span></a></a><span> </span><a name="local-6989586621679058432"><a href="#local-6989586621679058432"><span class="hs-identifier">fc'</span></a></a><span class="hs-special">)</span><span> </span><a name="local-6989586621679058433"><a href="#local-6989586621679058433"><span class="hs-identifier">c'</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="#local-6989586621679058431"><span class="hs-identifier hs-var">fb'</span></a><span> </span><a href="Pipes.Core.html#%3E%5C%5C"><span class="hs-operator hs-var">&gt;\\</span></a><span> </span><a href="#local-6989586621679058432"><span class="hs-identifier hs-var">fc'</span></a><span> </span><a href="#local-6989586621679058433"><span class="hs-identifier hs-var">c'</span></a><span>
+</span><a name="line-434"></a><span class="hs-pragma">{-# INLINABLE (\&gt;\) #-}</span><span>
+</span><a name="line-435"></a><span>
+</span><a name="line-436"></a><span class="hs-comment">{-| @(f &gt;\\\\ p)@ replaces each 'request' in @p@ with @f@.
+
+    Point-ful version of ('\&gt;\')
+-}</span><span>
+</span><a name="line-440"></a><span class="hs-special">(</span><span class="hs-operator">&gt;\\</span><span class="hs-special">)</span><span>
+</span><a name="line-441"></a><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058361"><span class="hs-identifier hs-type">m</span></a><span>
+</span><a name="line-442"></a><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058362"><span class="hs-identifier hs-type">b'</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058363"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058364"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058365"><span class="hs-identifier hs-type">y'</span></a><span> </span><a href="#local-6989586621679058366"><span class="hs-identifier hs-type">y</span></a><span> </span><a href="#local-6989586621679058361"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058367"><span class="hs-identifier hs-type">b</span></a><span class="hs-special">)</span><span>
+</span><a name="line-443"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-444"></a><span>    </span><span class="hs-glyph">-&gt;</span><span>        </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058362"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058367"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058365"><span class="hs-identifier hs-type">y'</span></a><span> </span><a href="#local-6989586621679058366"><span class="hs-identifier hs-type">y</span></a><span> </span><a href="#local-6989586621679058361"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058368"><span class="hs-identifier hs-type">c</span></a><span>
+</span><a name="line-445"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-446"></a><span>    </span><span class="hs-glyph">-&gt;</span><span>        </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058363"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058364"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058365"><span class="hs-identifier hs-type">y'</span></a><span> </span><a href="#local-6989586621679058366"><span class="hs-identifier hs-type">y</span></a><span> </span><a href="#local-6989586621679058361"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058368"><span class="hs-identifier hs-type">c</span></a><span>
+</span><a name="line-447"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-448"></a><a name="local-6989586621679058434"><a href="#local-6989586621679058434"><span class="hs-identifier">fb'</span></a></a><span> </span><a name="%3E%5C%5C"><a href="Pipes.Core.html#%3E%5C%5C"><span class="hs-operator">&gt;\\</span></a></a><span> </span><a name="local-6989586621679058435"><a href="#local-6989586621679058435"><span class="hs-identifier">p0</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="#local-6989586621679058436"><span class="hs-identifier hs-var">go</span></a><span> </span><a href="#local-6989586621679058435"><span class="hs-identifier hs-var">p0</span></a><span>
+</span><a name="line-449"></a><span>  </span><span class="hs-keyword">where</span><span>
+</span><a name="line-450"></a><span>    </span><a name="local-6989586621679058436"><a href="#local-6989586621679058436"><span class="hs-identifier">go</span></a></a><span> </span><a name="local-6989586621679058437"><a href="#local-6989586621679058437"><span class="hs-identifier">p</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><a href="#local-6989586621679058437"><span class="hs-identifier hs-var">p</span></a><span> </span><span class="hs-keyword">of</span><span>
+</span><a name="line-451"></a><span>        </span><a href="Pipes.Internal.html#Request"><span class="hs-identifier hs-var">Request</span></a><span> </span><a name="local-6989586621679058438"><a href="#local-6989586621679058438"><span class="hs-identifier">b'</span></a></a><span> </span><a name="local-6989586621679058439"><a href="#local-6989586621679058439"><span class="hs-identifier">fb</span></a></a><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><a href="#local-6989586621679058434"><span class="hs-identifier hs-var">fb'</span></a><span> </span><a href="#local-6989586621679058438"><span class="hs-identifier hs-var">b'</span></a><span> </span><span class="hs-operator hs-var">&gt;&gt;=</span><span> </span><span class="hs-glyph">\</span><a name="local-6989586621679058440"><a href="#local-6989586621679058440"><span class="hs-identifier">b</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="#local-6989586621679058436"><span class="hs-identifier hs-var">go</span></a><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058439"><span class="hs-identifier hs-var">fb</span></a><span> </span><a href="#local-6989586621679058440"><span class="hs-identifier hs-var">b</span></a><span class="hs-special">)</span><span>
+</span><a name="line-452"></a><span>        </span><a href="Pipes.Internal.html#Respond"><span class="hs-identifier hs-var">Respond</span></a><span> </span><a name="local-6989586621679058441"><a href="#local-6989586621679058441"><span class="hs-identifier">x</span></a></a><span>  </span><a name="local-6989586621679058442"><a href="#local-6989586621679058442"><span class="hs-identifier">fx'</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Respond"><span class="hs-identifier hs-var">Respond</span></a><span> </span><a href="#local-6989586621679058441"><span class="hs-identifier hs-var">x</span></a><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><a name="local-6989586621679058443"><a href="#local-6989586621679058443"><span class="hs-identifier">x'</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="#local-6989586621679058436"><span class="hs-identifier hs-var">go</span></a><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058442"><span class="hs-identifier hs-var">fx'</span></a><span> </span><a href="#local-6989586621679058443"><span class="hs-identifier hs-var">x'</span></a><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a name="line-453"></a><span>        </span><a href="Pipes.Internal.html#M"><span class="hs-identifier hs-var">M</span></a><span>          </span><a name="local-6989586621679058444"><a href="#local-6989586621679058444"><span class="hs-identifier">m</span></a></a><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#M"><span class="hs-identifier hs-var">M</span></a><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058444"><span class="hs-identifier hs-var">m</span></a><span> </span><span class="hs-operator hs-var">&gt;&gt;=</span><span> </span><span class="hs-glyph">\</span><a name="local-6989586621679058445"><a href="#local-6989586621679058445"><span class="hs-identifier">p'</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-var">return</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058436"><span class="hs-identifier hs-var">go</span></a><span> </span><a href="#local-6989586621679058445"><span class="hs-identifier hs-var">p'</span></a><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a name="line-454"></a><span>        </span><a href="Pipes.Internal.html#Pure"><span class="hs-identifier hs-var">Pure</span></a><span>       </span><a name="local-6989586621679058446"><a href="#local-6989586621679058446"><span class="hs-identifier">a</span></a></a><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Pure"><span class="hs-identifier hs-var">Pure</span></a><span> </span><a href="#local-6989586621679058446"><span class="hs-identifier hs-var">a</span></a><span>
+</span><a name="line-455"></a><span class="hs-pragma">{-# INLINE [1] (&gt;\\) #-}</span><span>
+</span><a name="line-456"></a><span>
+</span><a name="line-457"></a><span class="hs-pragma">{-# RULES
+    &quot;fb' &gt;\\ (Request b' fb )&quot; forall fb' b' fb  .
+        fb' &gt;\\ (Request b' fb ) = fb' b' &gt;&gt;= \b -&gt; fb' &gt;\\ fb  b;
+    &quot;fb' &gt;\\ (Respond x  fx')&quot; forall fb' x  fx' .
+        fb' &gt;\\ (Respond x  fx') = Respond x (\x' -&gt; fb' &gt;\\ fx' x');
+    &quot;fb' &gt;\\ (M          m  )&quot; forall fb'    m   .
+        fb' &gt;\\ (M          m  ) = M (m &gt;&gt;= \p' -&gt; return (fb' &gt;\\ p'));
+    &quot;fb' &gt;\\ (Pure    a    )&quot; forall fb' a      .
+        fb' &gt;\\ (Pure    a     ) = Pure a;
+  #-}</span><span>
+</span><a name="line-467"></a><span>
+</span><a name="line-468"></a><span class="hs-comment">{- $push
+    The 'push' category closely corresponds to push-based Unix pipes.
+
+    The 'push' category obeys the category laws, where 'push' is the identity
+    and ('&gt;~&gt;') is composition:
+
+@
+\-\- Left identity
+'push' '&gt;~&gt;' f = f
+
+\-\- Right identity
+f '&gt;~&gt;' 'push' = f
+
+\-\- Associativity
+(f '&gt;~&gt;' g) '&gt;~&gt;' h = f '&gt;~&gt;' (g '&gt;~&gt;' h)
+@
+
+    The following diagram shows the flow of information:
+
+@
+'push'  :: 'Monad' m
+      =&gt;  a -&gt; 'Proxy' a' a a' a m r
+
+\          a
+          |
+     +----|----+
+     |    v    |
+ a' &lt;============ a'
+     |         |
+ a  ============&gt; a
+     |    |    |
+     +----|----+
+          v
+          r
+
+('&gt;~&gt;') :: 'Monad' m
+      =&gt; (a -&gt; 'Proxy' a' a b' b m r)
+      -&gt; (b -&gt; 'Proxy' b' b c' c m r)
+      -&gt; (a -&gt; 'Proxy' a' a c' c m r)
+
+\          a                b                      a
+          |                |                      |
+     +----|----+      +----|----+            +----|----+
+     |    v    |      |    v    |            |    v    |
+ a' &lt;==       &lt;== b' &lt;==       &lt;== c'    a' &lt;==       &lt;== c'
+     |    f    |      |    g    |     =      | f '&gt;~&gt;' g |
+ a  ==&gt;       ==&gt; b  ==&gt;       ==&gt; c     a  ==&gt;       ==&gt; c
+     |    |    |      |    |    |            |    |    |
+     +----|----+      +----|----+            +----|----+
+          v                v                      v
+          r                r                      r
+@
+
+-}</span><span>
+</span><a name="line-522"></a><span>
+</span><a name="line-523"></a><span class="hs-comment">{-| Forward responses followed by requests
+
+@
+'push' = 'respond' 'Control.Monad.&gt;=&gt;' 'request' 'Control.Monad.&gt;=&gt;' 'push'
+@
+
+    'push' is the identity of the push category.
+-}</span><span>
+</span><a name="line-531"></a><span class="hs-identifier">push</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058357"><span class="hs-identifier hs-type">m</span></a><span> </span><span class="hs-glyph">=&gt;</span><span> </span><a href="#local-6989586621679058358"><span class="hs-identifier hs-type">a</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058359"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058358"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058359"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058358"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058357"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058360"><span class="hs-identifier hs-type">r</span></a><span>
+</span><a name="line-532"></a><a name="push"><a href="Pipes.Core.html#push"><span class="hs-identifier">push</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="#local-6989586621679058447"><span class="hs-identifier hs-var">go</span></a><span>
+</span><a name="line-533"></a><span>  </span><span class="hs-keyword">where</span><span>
+</span><a name="line-534"></a><span>    </span><a name="local-6989586621679058447"><a href="#local-6989586621679058447"><span class="hs-identifier">go</span></a></a><span> </span><a name="local-6989586621679058448"><a href="#local-6989586621679058448"><span class="hs-identifier">a</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="Pipes.Internal.html#Respond"><span class="hs-identifier hs-var">Respond</span></a><span> </span><a href="#local-6989586621679058448"><span class="hs-identifier hs-var">a</span></a><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><a name="local-6989586621679058449"><a href="#local-6989586621679058449"><span class="hs-identifier">a'</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Request"><span class="hs-identifier hs-var">Request</span></a><span> </span><a href="#local-6989586621679058449"><span class="hs-identifier hs-var">a'</span></a><span> </span><a href="#local-6989586621679058447"><span class="hs-identifier hs-var">go</span></a><span class="hs-special">)</span><span>
+</span><a name="line-535"></a><span class="hs-pragma">{-# INLINABLE [1] push #-}</span><span>
+</span><a name="line-536"></a><span>
+</span><a name="line-537"></a><span class="hs-comment">{-| Compose two proxies blocked while 'request'ing data, creating a new proxy
+    blocked while 'request'ing data
+
+@
+(f '&gt;~&gt;' g) x = f x '&gt;&gt;~' g
+@
+
+    ('&gt;~&gt;') is the composition operator of the push category.
+-}</span><span>
+</span><a name="line-546"></a><span class="hs-special">(</span><span class="hs-operator">&gt;~&gt;</span><span class="hs-special">)</span><span>
+</span><a name="line-547"></a><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058348"><span class="hs-identifier hs-type">m</span></a><span>
+</span><a name="line-548"></a><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058349"><span class="hs-identifier hs-type">_a</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058350"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058351"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058352"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058353"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058348"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058354"><span class="hs-identifier hs-type">r</span></a><span class="hs-special">)</span><span>
+</span><a name="line-549"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-550"></a><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><span> </span><a href="#local-6989586621679058353"><span class="hs-identifier hs-type">b</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058352"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058353"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058355"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058356"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058348"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058354"><span class="hs-identifier hs-type">r</span></a><span class="hs-special">)</span><span>
+</span><a name="line-551"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-552"></a><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058349"><span class="hs-identifier hs-type">_a</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058350"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058351"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058355"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058356"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058348"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058354"><span class="hs-identifier hs-type">r</span></a><span class="hs-special">)</span><span>
+</span><a name="line-553"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-554"></a><span class="hs-special">(</span><a name="local-6989586621679058450"><a href="#local-6989586621679058450"><span class="hs-identifier">fa</span></a></a><span> </span><a name="%3E~%3E"><a href="Pipes.Core.html#%3E~%3E"><span class="hs-operator">&gt;~&gt;</span></a></a><span> </span><a name="local-6989586621679058451"><a href="#local-6989586621679058451"><span class="hs-identifier">fb</span></a></a><span class="hs-special">)</span><span> </span><a name="local-6989586621679058452"><a href="#local-6989586621679058452"><span class="hs-identifier">a</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="#local-6989586621679058450"><span class="hs-identifier hs-var">fa</span></a><span> </span><a href="#local-6989586621679058452"><span class="hs-identifier hs-var">a</span></a><span> </span><a href="Pipes.Core.html#%3E%3E~"><span class="hs-operator hs-var">&gt;&gt;~</span></a><span> </span><a href="#local-6989586621679058451"><span class="hs-identifier hs-var">fb</span></a><span>
+</span><a name="line-555"></a><span class="hs-pragma">{-# INLINABLE (&gt;~&gt;) #-}</span><span>
+</span><a name="line-556"></a><span>
+</span><a name="line-557"></a><span class="hs-comment">{-| @(p &gt;&gt;~ f)@ pairs each 'respond' in @p@ with a 'request' in @f@.
+
+    Point-ful version of ('&gt;~&gt;')
+-}</span><span>
+</span><a name="line-561"></a><span class="hs-special">(</span><span class="hs-operator">&gt;&gt;~</span><span class="hs-special">)</span><span>
+</span><a name="line-562"></a><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058340"><span class="hs-identifier hs-type">m</span></a><span>
+</span><a name="line-563"></a><span>    </span><span class="hs-glyph">=&gt;</span><span>       </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058341"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058342"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058343"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058344"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058340"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058345"><span class="hs-identifier hs-type">r</span></a><span>
+</span><a name="line-564"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-565"></a><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058344"><span class="hs-identifier hs-type">b</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058343"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058344"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058346"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058347"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058340"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058345"><span class="hs-identifier hs-type">r</span></a><span class="hs-special">)</span><span>
+</span><a name="line-566"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-567"></a><span>    </span><span class="hs-glyph">-&gt;</span><span>       </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058341"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058342"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058346"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058347"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058340"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058345"><span class="hs-identifier hs-type">r</span></a><span>
+</span><a name="line-568"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-569"></a><a name="local-6989586621679058453"><a href="#local-6989586621679058453"><span class="hs-identifier">p</span></a></a><span> </span><a name="%3E%3E~"><a href="Pipes.Core.html#%3E%3E~"><span class="hs-operator">&gt;&gt;~</span></a></a><span> </span><a name="local-6989586621679058454"><a href="#local-6989586621679058454"><span class="hs-identifier">fb</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><a href="#local-6989586621679058453"><span class="hs-identifier hs-var">p</span></a><span> </span><span class="hs-keyword">of</span><span>
+</span><a name="line-570"></a><span>    </span><a href="Pipes.Internal.html#Request"><span class="hs-identifier hs-var">Request</span></a><span> </span><a name="local-6989586621679058455"><a href="#local-6989586621679058455"><span class="hs-identifier">a'</span></a></a><span> </span><a name="local-6989586621679058456"><a href="#local-6989586621679058456"><span class="hs-identifier">fa</span></a></a><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Request"><span class="hs-identifier hs-var">Request</span></a><span> </span><a href="#local-6989586621679058455"><span class="hs-identifier hs-var">a'</span></a><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><a name="local-6989586621679058457"><a href="#local-6989586621679058457"><span class="hs-identifier">a</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="#local-6989586621679058456"><span class="hs-identifier hs-var">fa</span></a><span> </span><a href="#local-6989586621679058457"><span class="hs-identifier hs-var">a</span></a><span> </span><a href="Pipes.Core.html#%3E%3E~"><span class="hs-operator hs-var">&gt;&gt;~</span></a><span> </span><a href="#local-6989586621679058454"><span class="hs-identifier hs-var">fb</span></a><span class="hs-special">)</span><span>
+</span><a name="line-571"></a><span>    </span><a href="Pipes.Internal.html#Respond"><span class="hs-identifier hs-var">Respond</span></a><span> </span><a name="local-6989586621679058458"><a href="#local-6989586621679058458"><span class="hs-identifier">b</span></a></a><span>  </span><a name="local-6989586621679058459"><a href="#local-6989586621679058459"><span class="hs-identifier">fb'</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="#local-6989586621679058459"><span class="hs-identifier hs-var">fb'</span></a><span> </span><a href="Pipes.Core.html#%2B%3E%3E"><span class="hs-operator hs-var">+&gt;&gt;</span></a><span> </span><a href="#local-6989586621679058454"><span class="hs-identifier hs-var">fb</span></a><span> </span><a href="#local-6989586621679058458"><span class="hs-identifier hs-var">b</span></a><span>
+</span><a name="line-572"></a><span>    </span><a href="Pipes.Internal.html#M"><span class="hs-identifier hs-var">M</span></a><span>          </span><a name="local-6989586621679058460"><a href="#local-6989586621679058460"><span class="hs-identifier">m</span></a></a><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#M"><span class="hs-identifier hs-var">M</span></a><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058460"><span class="hs-identifier hs-var">m</span></a><span> </span><span class="hs-operator hs-var">&gt;&gt;=</span><span> </span><span class="hs-glyph">\</span><a name="local-6989586621679058461"><a href="#local-6989586621679058461"><span class="hs-identifier">p'</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-var">return</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058461"><span class="hs-identifier hs-var">p'</span></a><span> </span><a href="Pipes.Core.html#%3E%3E~"><span class="hs-operator hs-var">&gt;&gt;~</span></a><span> </span><a href="#local-6989586621679058454"><span class="hs-identifier hs-var">fb</span></a><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a name="line-573"></a><span>    </span><a href="Pipes.Internal.html#Pure"><span class="hs-identifier hs-var">Pure</span></a><span>       </span><a name="local-6989586621679058462"><a href="#local-6989586621679058462"><span class="hs-identifier">r</span></a></a><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Pure"><span class="hs-identifier hs-var">Pure</span></a><span> </span><a href="#local-6989586621679058462"><span class="hs-identifier hs-var">r</span></a><span>
+</span><a name="line-574"></a><span class="hs-pragma">{-# INLINE [1] (&gt;&gt;~) #-}</span><span>
+</span><a name="line-575"></a><span>
+</span><a name="line-576"></a><span class="hs-comment">{- $pull
+    The 'pull' category closely corresponds to pull-based Unix pipes.
+
+    The 'pull' category obeys the category laws, where 'pull' is the identity
+    and ('&gt;+&gt;') is composition:
+
+@
+\-\- Left identity
+'pull' '&gt;+&gt;' f = f
+
+\-\- Right identity
+f '&gt;+&gt;' 'pull' = f
+
+\-\- Associativity
+(f '&gt;+&gt;' g) '&gt;+&gt;' h = f '&gt;+&gt;' (g '&gt;+&gt;' h)
+@
+
+#pull-diagram#
+
+    The following diagrams show the flow of information:
+
+@
+'pull'  :: 'Monad' m
+      =&gt;  a' -&gt; 'Proxy' a' a a' a m r
+
+\          a'
+          |
+     +----|----+
+     |    v    |
+ a' &lt;============ a'
+     |         |
+ a  ============&gt; a
+     |    |    |
+     +----|----+
+          v
+          r
+
+('&gt;+&gt;') :: 'Monad' m
+      -&gt; (b' -&gt; 'Proxy' a' a b' b m r)
+      -&gt; (c' -&gt; 'Proxy' b' b c' c m r)
+      -&gt; (c' -&gt; 'Proxy' a' a c' c m r)
+
+\          b'               c'                     c'
+          |                |                      |
+     +----|----+      +----|----+            +----|----+
+     |    v    |      |    v    |            |    v    |
+ a' &lt;==       &lt;== b' &lt;==       &lt;== c'    a' &lt;==       &lt;== c'
+     |    f    |      |    g    |     =      | f &gt;+&gt; g |
+ a  ==&gt;       ==&gt; b  ==&gt;       ==&gt; c     a  ==&gt;       ==&gt; c
+     |    |    |      |    |    |            |    |    |
+     +----|----+      +----|----+            +----|----+
+          v                v                      v
+          r                r                      r
+@
+
+-}</span><span>
+</span><a name="line-632"></a><span>
+</span><a name="line-633"></a><span class="hs-comment">{-| Forward requests followed by responses:
+
+@
+'pull' = 'request' 'Control.Monad.&gt;=&gt;' 'respond' 'Control.Monad.&gt;=&gt;' 'pull'
+@
+
+    'pull' is the identity of the pull category.
+-}</span><span>
+</span><a name="line-641"></a><span class="hs-identifier">pull</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058336"><span class="hs-identifier hs-type">m</span></a><span> </span><span class="hs-glyph">=&gt;</span><span> </span><a href="#local-6989586621679058337"><span class="hs-identifier hs-type">a'</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058337"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058338"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058337"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058338"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058336"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058339"><span class="hs-identifier hs-type">r</span></a><span>
+</span><a name="line-642"></a><a name="pull"><a href="Pipes.Core.html#pull"><span class="hs-identifier">pull</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="#local-6989586621679058463"><span class="hs-identifier hs-var">go</span></a><span>
+</span><a name="line-643"></a><span>  </span><span class="hs-keyword">where</span><span>
+</span><a name="line-644"></a><span>    </span><a name="local-6989586621679058463"><a href="#local-6989586621679058463"><span class="hs-identifier">go</span></a></a><span> </span><a name="local-6989586621679058464"><a href="#local-6989586621679058464"><span class="hs-identifier">a'</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="Pipes.Internal.html#Request"><span class="hs-identifier hs-var">Request</span></a><span> </span><a href="#local-6989586621679058464"><span class="hs-identifier hs-var">a'</span></a><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><a name="local-6989586621679058465"><a href="#local-6989586621679058465"><span class="hs-identifier">a</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Respond"><span class="hs-identifier hs-var">Respond</span></a><span> </span><a href="#local-6989586621679058465"><span class="hs-identifier hs-var">a</span></a><span> </span><a href="#local-6989586621679058463"><span class="hs-identifier hs-var">go</span></a><span class="hs-special">)</span><span>
+</span><a name="line-645"></a><span class="hs-pragma">{-# INLINABLE [1] pull #-}</span><span>
+</span><a name="line-646"></a><span>
+</span><a name="line-647"></a><span class="hs-comment">{-| Compose two proxies blocked in the middle of 'respond'ing, creating a new
+    proxy blocked in the middle of 'respond'ing
+
+@
+(f '&gt;+&gt;' g) x = f '+&gt;&gt;' g x
+@
+
+    ('&gt;+&gt;') is the composition operator of the pull category.
+-}</span><span>
+</span><a name="line-656"></a><span class="hs-special">(</span><span class="hs-operator">&gt;+&gt;</span><span class="hs-special">)</span><span>
+</span><a name="line-657"></a><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058327"><span class="hs-identifier hs-type">m</span></a><span>
+</span><a name="line-658"></a><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><span> </span><a href="#local-6989586621679058328"><span class="hs-identifier hs-type">b'</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058329"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058330"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058328"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058331"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058327"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058332"><span class="hs-identifier hs-type">r</span></a><span class="hs-special">)</span><span>
+</span><a name="line-659"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-660"></a><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058333"><span class="hs-identifier hs-type">_c'</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058328"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058331"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058334"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058335"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058327"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058332"><span class="hs-identifier hs-type">r</span></a><span class="hs-special">)</span><span>
+</span><a name="line-661"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-662"></a><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058333"><span class="hs-identifier hs-type">_c'</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058329"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058330"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058334"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058335"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058327"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058332"><span class="hs-identifier hs-type">r</span></a><span class="hs-special">)</span><span>
+</span><a name="line-663"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-664"></a><span class="hs-special">(</span><a name="local-6989586621679058466"><a href="#local-6989586621679058466"><span class="hs-identifier">fb'</span></a></a><span> </span><a name="%3E%2B%3E"><a href="Pipes.Core.html#%3E%2B%3E"><span class="hs-operator">&gt;+&gt;</span></a></a><span> </span><a name="local-6989586621679058467"><a href="#local-6989586621679058467"><span class="hs-identifier">fc'</span></a></a><span class="hs-special">)</span><span> </span><a name="local-6989586621679058468"><a href="#local-6989586621679058468"><span class="hs-identifier">c'</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="#local-6989586621679058466"><span class="hs-identifier hs-var">fb'</span></a><span> </span><a href="Pipes.Core.html#%2B%3E%3E"><span class="hs-operator hs-var">+&gt;&gt;</span></a><span> </span><a href="#local-6989586621679058467"><span class="hs-identifier hs-var">fc'</span></a><span> </span><a href="#local-6989586621679058468"><span class="hs-identifier hs-var">c'</span></a><span>
+</span><a name="line-665"></a><span class="hs-pragma">{-# INLINABLE (&gt;+&gt;) #-}</span><span>
+</span><a name="line-666"></a><span>
+</span><a name="line-667"></a><span class="hs-comment">{-| @(f +&gt;&gt; p)@ pairs each 'request' in @p@ with a 'respond' in @f@.
+
+    Point-ful version of ('&gt;+&gt;')
+-}</span><span>
+</span><a name="line-671"></a><span class="hs-special">(</span><span class="hs-operator">+&gt;&gt;</span><span class="hs-special">)</span><span>
+</span><a name="line-672"></a><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058319"><span class="hs-identifier hs-type">m</span></a><span>
+</span><a name="line-673"></a><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058320"><span class="hs-identifier hs-type">b'</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058321"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058322"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058320"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058323"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058319"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058324"><span class="hs-identifier hs-type">r</span></a><span class="hs-special">)</span><span>
+</span><a name="line-674"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-675"></a><span>    </span><span class="hs-glyph">-&gt;</span><span>        </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058320"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058323"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058325"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058326"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058319"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058324"><span class="hs-identifier hs-type">r</span></a><span>
+</span><a name="line-676"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-677"></a><span>    </span><span class="hs-glyph">-&gt;</span><span>        </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058321"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058322"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058325"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058326"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058319"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058324"><span class="hs-identifier hs-type">r</span></a><span>
+</span><a name="line-678"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-679"></a><a name="local-6989586621679058469"><a href="#local-6989586621679058469"><span class="hs-identifier">fb'</span></a></a><span> </span><a name="%2B%3E%3E"><a href="Pipes.Core.html#%2B%3E%3E"><span class="hs-operator">+&gt;&gt;</span></a></a><span> </span><a name="local-6989586621679058470"><a href="#local-6989586621679058470"><span class="hs-identifier">p</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><a href="#local-6989586621679058470"><span class="hs-identifier hs-var">p</span></a><span> </span><span class="hs-keyword">of</span><span>
+</span><a name="line-680"></a><span>    </span><a href="Pipes.Internal.html#Request"><span class="hs-identifier hs-var">Request</span></a><span> </span><a name="local-6989586621679058471"><a href="#local-6989586621679058471"><span class="hs-identifier">b'</span></a></a><span> </span><a name="local-6989586621679058472"><a href="#local-6989586621679058472"><span class="hs-identifier">fb</span></a></a><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><a href="#local-6989586621679058469"><span class="hs-identifier hs-var">fb'</span></a><span> </span><a href="#local-6989586621679058471"><span class="hs-identifier hs-var">b'</span></a><span> </span><a href="Pipes.Core.html#%3E%3E~"><span class="hs-operator hs-var">&gt;&gt;~</span></a><span> </span><a href="#local-6989586621679058472"><span class="hs-identifier hs-var">fb</span></a><span>
+</span><a name="line-681"></a><span>    </span><a href="Pipes.Internal.html#Respond"><span class="hs-identifier hs-var">Respond</span></a><span> </span><a name="local-6989586621679058473"><a href="#local-6989586621679058473"><span class="hs-identifier">c</span></a></a><span>  </span><a name="local-6989586621679058474"><a href="#local-6989586621679058474"><span class="hs-identifier">fc'</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Respond"><span class="hs-identifier hs-var">Respond</span></a><span> </span><a href="#local-6989586621679058473"><span class="hs-identifier hs-var">c</span></a><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><a name="local-6989586621679058475"><a href="#local-6989586621679058475"><span class="hs-identifier">c'</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="#local-6989586621679058469"><span class="hs-identifier hs-var">fb'</span></a><span> </span><a href="Pipes.Core.html#%2B%3E%3E"><span class="hs-operator hs-var">+&gt;&gt;</span></a><span> </span><a href="#local-6989586621679058474"><span class="hs-identifier hs-var">fc'</span></a><span> </span><a href="#local-6989586621679058475"><span class="hs-identifier hs-var">c'</span></a><span class="hs-special">)</span><span>
+</span><a name="line-682"></a><span>    </span><a href="Pipes.Internal.html#M"><span class="hs-identifier hs-var">M</span></a><span>          </span><a name="local-6989586621679058476"><a href="#local-6989586621679058476"><span class="hs-identifier">m</span></a></a><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#M"><span class="hs-identifier hs-var">M</span></a><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058476"><span class="hs-identifier hs-var">m</span></a><span> </span><span class="hs-operator hs-var">&gt;&gt;=</span><span> </span><span class="hs-glyph">\</span><a name="local-6989586621679058477"><a href="#local-6989586621679058477"><span class="hs-identifier">p'</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-var">return</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058469"><span class="hs-identifier hs-var">fb'</span></a><span> </span><a href="Pipes.Core.html#%2B%3E%3E"><span class="hs-operator hs-var">+&gt;&gt;</span></a><span> </span><a href="#local-6989586621679058477"><span class="hs-identifier hs-var">p'</span></a><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a name="line-683"></a><span>    </span><a href="Pipes.Internal.html#Pure"><span class="hs-identifier hs-var">Pure</span></a><span>       </span><a name="local-6989586621679058478"><a href="#local-6989586621679058478"><span class="hs-identifier">r</span></a></a><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Pure"><span class="hs-identifier hs-var">Pure</span></a><span> </span><a href="#local-6989586621679058478"><span class="hs-identifier hs-var">r</span></a><span>
+</span><a name="line-684"></a><span class="hs-pragma">{-# INLINABLE [1] (+&gt;&gt;) #-}</span><span>
+</span><a name="line-685"></a><span>
+</span><a name="line-686"></a><span class="hs-comment">{- $reflect
+    @(reflect .)@ transforms each streaming category into its dual:
+
+    * The request category is the dual of the respond category
+
+@
+'reflect' '.' 'respond' = 'request'
+
+'reflect' '.' (f '/&gt;/' g) = 'reflect' '.' f '/&lt;/' 'reflect' '.' g
+@
+
+@
+'reflect' '.' 'request' = 'respond'
+
+'reflect' '.' (f '\&gt;\' g) = 'reflect' '.' f '\&lt;\' 'reflect' '.' g
+@
+
+    * The pull category is the dual of the push category
+
+@
+'reflect' '.' 'push' = 'pull'
+
+'reflect' '.' (f '&gt;~&gt;' g) = 'reflect' '.' f '&lt;+&lt;' 'reflect' '.' g
+@
+
+@
+'reflect' '.' 'pull' = 'push'
+
+'reflect' '.' (f '&gt;+&gt;' g) = 'reflect' '.' f '&lt;~&lt;' 'reflect' '.' g
+@
+-}</span><span>
+</span><a name="line-717"></a><span>
+</span><a name="line-718"></a><span class="hs-comment">-- | Switch the upstream and downstream ends</span><span>
+</span><a name="line-719"></a><span class="hs-identifier">reflect</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058313"><span class="hs-identifier hs-type">m</span></a><span> </span><span class="hs-glyph">=&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058314"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058315"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058316"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058317"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058313"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058318"><span class="hs-identifier hs-type">r</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058317"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058316"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058315"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058314"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058313"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058318"><span class="hs-identifier hs-type">r</span></a><span>
+</span><a name="line-720"></a><a name="reflect"><a href="Pipes.Core.html#reflect"><span class="hs-identifier">reflect</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="#local-6989586621679058479"><span class="hs-identifier hs-var">go</span></a><span>
+</span><a name="line-721"></a><span>  </span><span class="hs-keyword">where</span><span>
+</span><a name="line-722"></a><span>    </span><a name="local-6989586621679058479"><a href="#local-6989586621679058479"><span class="hs-identifier">go</span></a></a><span> </span><a name="local-6989586621679058480"><a href="#local-6989586621679058480"><span class="hs-identifier">p</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">case</span><span> </span><a href="#local-6989586621679058480"><span class="hs-identifier hs-var">p</span></a><span> </span><span class="hs-keyword">of</span><span>
+</span><a name="line-723"></a><span>        </span><a href="Pipes.Internal.html#Request"><span class="hs-identifier hs-var">Request</span></a><span> </span><a name="local-6989586621679058481"><a href="#local-6989586621679058481"><span class="hs-identifier">a'</span></a></a><span> </span><a name="local-6989586621679058482"><a href="#local-6989586621679058482"><span class="hs-identifier">fa</span></a></a><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Respond"><span class="hs-identifier hs-var">Respond</span></a><span> </span><a href="#local-6989586621679058481"><span class="hs-identifier hs-var">a'</span></a><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><a name="local-6989586621679058483"><a href="#local-6989586621679058483"><span class="hs-identifier">a</span></a></a><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><a href="#local-6989586621679058479"><span class="hs-identifier hs-var">go</span></a><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058482"><span class="hs-identifier hs-var">fa</span></a><span>  </span><a href="#local-6989586621679058483"><span class="hs-identifier hs-var">a</span></a><span> </span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a name="line-724"></a><span>        </span><a href="Pipes.Internal.html#Respond"><span class="hs-identifier hs-var">Respond</span></a><span> </span><a name="local-6989586621679058484"><a href="#local-6989586621679058484"><span class="hs-identifier">b</span></a></a><span>  </span><a name="local-6989586621679058485"><a href="#local-6989586621679058485"><span class="hs-identifier">fb'</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Request"><span class="hs-identifier hs-var">Request</span></a><span> </span><a href="#local-6989586621679058484"><span class="hs-identifier hs-var">b</span></a><span>  </span><span class="hs-special">(</span><span class="hs-glyph">\</span><a name="local-6989586621679058486"><a href="#local-6989586621679058486"><span class="hs-identifier">b'</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="#local-6989586621679058479"><span class="hs-identifier hs-var">go</span></a><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058485"><span class="hs-identifier hs-var">fb'</span></a><span> </span><a href="#local-6989586621679058486"><span class="hs-identifier hs-var">b'</span></a><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a name="line-725"></a><span>        </span><a href="Pipes.Internal.html#M"><span class="hs-identifier hs-var">M</span></a><span>          </span><a name="local-6989586621679058487"><a href="#local-6989586621679058487"><span class="hs-identifier">m</span></a></a><span>   </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#M"><span class="hs-identifier hs-var">M</span></a><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058487"><span class="hs-identifier hs-var">m</span></a><span> </span><span class="hs-operator hs-var">&gt;&gt;=</span><span> </span><span class="hs-glyph">\</span><a name="local-6989586621679058488"><a href="#local-6989586621679058488"><span class="hs-identifier">p'</span></a></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-var">return</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058479"><span class="hs-identifier hs-var">go</span></a><span> </span><a href="#local-6989586621679058488"><span class="hs-identifier hs-var">p'</span></a><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a name="line-726"></a><span>        </span><a href="Pipes.Internal.html#Pure"><span class="hs-identifier hs-var">Pure</span></a><span>    </span><a name="local-6989586621679058489"><a href="#local-6989586621679058489"><span class="hs-identifier">r</span></a></a><span>      </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Pure"><span class="hs-identifier hs-var">Pure</span></a><span> </span><a href="#local-6989586621679058489"><span class="hs-identifier hs-var">r</span></a><span>
+</span><a name="line-727"></a><span class="hs-pragma">{-# INLINABLE reflect #-}</span><span>
+</span><a name="line-728"></a><span>
+</span><a name="line-729"></a><span class="hs-comment">{-| An effect in the base monad
+
+    'Effect's neither 'Pipes.await' nor 'Pipes.yield'
+-}</span><span>
+</span><a name="line-733"></a><span class="hs-keyword">type</span><span> </span><a name="Effect"><a href="Pipes.Core.html#Effect"><span class="hs-identifier">Effect</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="Pipes.Internal.html#X"><span class="hs-identifier hs-type">X</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><a href="Pipes.Internal.html#X"><span class="hs-identifier hs-type">X</span></a><span>
+</span><a name="line-734"></a><span>
+</span><a name="line-735"></a><span class="hs-comment">-- | 'Producer's can only 'Pipes.yield'</span><span>
+</span><a name="line-736"></a><span class="hs-keyword">type</span><span> </span><a name="Producer"><a href="Pipes.Core.html#Producer"><span class="hs-identifier">Producer</span></a></a><span> </span><a name="local-6989586621679058246"><a href="#local-6989586621679058246"><span class="hs-identifier">b</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="Pipes.Internal.html#X"><span class="hs-identifier hs-type">X</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><a href="#local-6989586621679058246"><span class="hs-identifier hs-type">b</span></a><span>
+</span><a name="line-737"></a><span>
+</span><a name="line-738"></a><span class="hs-comment">-- | 'Pipe's can both 'Pipes.await' and 'Pipes.yield'</span><span>
+</span><a name="line-739"></a><span class="hs-keyword">type</span><span> </span><a name="Pipe"><a href="Pipes.Core.html#Pipe"><span class="hs-identifier">Pipe</span></a></a><span> </span><a name="local-6989586621679058244"><a href="#local-6989586621679058244"><span class="hs-identifier">a</span></a></a><span> </span><a name="local-6989586621679058245"><a href="#local-6989586621679058245"><span class="hs-identifier">b</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><a href="#local-6989586621679058244"><span class="hs-identifier hs-type">a</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><a href="#local-6989586621679058245"><span class="hs-identifier hs-type">b</span></a><span>
+</span><a name="line-740"></a><span>
+</span><a name="line-741"></a><span class="hs-comment">-- | 'Consumer's can only 'Pipes.await'</span><span>
+</span><a name="line-742"></a><span class="hs-keyword">type</span><span> </span><a name="Consumer"><a href="Pipes.Core.html#Consumer"><span class="hs-identifier">Consumer</span></a></a><span> </span><a name="local-6989586621679058243"><a href="#local-6989586621679058243"><span class="hs-identifier">a</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><a href="#local-6989586621679058243"><span class="hs-identifier hs-type">a</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><a href="Pipes.Internal.html#X"><span class="hs-identifier hs-type">X</span></a><span>
+</span><a name="line-743"></a><span>
+</span><a name="line-744"></a><span class="hs-comment">{-| @Client a' a@ sends requests of type @a'@ and receives responses of
+    type @a@.
+
+    'Client's only 'request' and never 'respond'.
+-}</span><span>
+</span><a name="line-749"></a><span class="hs-keyword">type</span><span> </span><a name="Client"><a href="Pipes.Core.html#Client"><span class="hs-identifier">Client</span></a></a><span> </span><a name="local-6989586621679058241"><a href="#local-6989586621679058241"><span class="hs-identifier">a'</span></a></a><span> </span><a name="local-6989586621679058242"><a href="#local-6989586621679058242"><span class="hs-identifier">a</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058241"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058242"><span class="hs-identifier hs-type">a</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><a href="Pipes.Internal.html#X"><span class="hs-identifier hs-type">X</span></a><span>
+</span><a name="line-750"></a><span>
+</span><a name="line-751"></a><span class="hs-comment">{-| @Server b' b@ receives requests of type @b'@ and sends responses of type
+    @b@.
+
+    'Server's only 'respond' and never 'request'.
+-}</span><span>
+</span><a name="line-756"></a><span class="hs-keyword">type</span><span> </span><a name="Server"><a href="Pipes.Core.html#Server"><span class="hs-identifier">Server</span></a></a><span> </span><a name="local-6989586621679058239"><a href="#local-6989586621679058239"><span class="hs-identifier">b'</span></a></a><span> </span><a name="local-6989586621679058240"><a href="#local-6989586621679058240"><span class="hs-identifier">b</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="Pipes.Internal.html#X"><span class="hs-identifier hs-type">X</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><a href="#local-6989586621679058239"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058240"><span class="hs-identifier hs-type">b</span></a><span>
+</span><a name="line-757"></a><span>
+</span><a name="line-758"></a><span class="hs-comment">-- | Like 'Effect', but with a polymorphic type</span><span>
+</span><a name="line-759"></a><span class="hs-keyword">type</span><span> </span><a name="Effect%27"><a href="Pipes.Core.html#Effect%27"><span class="hs-identifier">Effect'</span></a></a><span> </span><a name="local-6989586621679058233"><a href="#local-6989586621679058233"><span class="hs-identifier">m</span></a></a><span> </span><a name="local-6989586621679058234"><a href="#local-6989586621679058234"><span class="hs-identifier">r</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">forall</span><span> </span><a name="local-6989586621679058235"><a href="#local-6989586621679058235"><span class="hs-identifier">x'</span></a></a><span> </span><a name="local-6989586621679058236"><a href="#local-6989586621679058236"><span class="hs-identifier">x</span></a></a><span> </span><a name="local-6989586621679058237"><a href="#local-6989586621679058237"><span class="hs-identifier">y'</span></a></a><span> </span><a name="local-6989586621679058238"><a href="#local-6989586621679058238"><span class="hs-identifier">y</span></a></a><span> </span><span class="hs-operator">.</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058235"><span class="hs-identifier hs-type">x'</span></a><span> </span><a href="#local-6989586621679058236"><span class="hs-identifier hs-type">x</span></a><span> </span><a href="#local-6989586621679058237"><span class="hs-identifier hs-type">y'</span></a><span> </span><a href="#local-6989586621679058238"><span class="hs-identifier hs-type">y</span></a><span> </span><a href="#local-6989586621679058233"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058234"><span class="hs-identifier hs-type">r</span></a><span>
+</span><a name="line-760"></a><span>
+</span><a name="line-761"></a><span class="hs-comment">-- | Like 'Producer', but with a polymorphic type</span><span>
+</span><a name="line-762"></a><span class="hs-keyword">type</span><span> </span><a name="Producer%27"><a href="Pipes.Core.html#Producer%27"><span class="hs-identifier">Producer'</span></a></a><span> </span><a name="local-6989586621679058228"><a href="#local-6989586621679058228"><span class="hs-identifier">b</span></a></a><span> </span><a name="local-6989586621679058229"><a href="#local-6989586621679058229"><span class="hs-identifier">m</span></a></a><span> </span><a name="local-6989586621679058230"><a href="#local-6989586621679058230"><span class="hs-identifier">r</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">forall</span><span> </span><a name="local-6989586621679058231"><a href="#local-6989586621679058231"><span class="hs-identifier">x'</span></a></a><span> </span><a name="local-6989586621679058232"><a href="#local-6989586621679058232"><span class="hs-identifier">x</span></a></a><span> </span><span class="hs-operator">.</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058231"><span class="hs-identifier hs-type">x'</span></a><span> </span><a href="#local-6989586621679058232"><span class="hs-identifier hs-type">x</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><a href="#local-6989586621679058228"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058229"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058230"><span class="hs-identifier hs-type">r</span></a><span>
+</span><a name="line-763"></a><span>
+</span><a name="line-764"></a><span class="hs-comment">-- | Like 'Consumer', but with a polymorphic type</span><span>
+</span><a name="line-765"></a><span class="hs-keyword">type</span><span> </span><a name="Consumer%27"><a href="Pipes.Core.html#Consumer%27"><span class="hs-identifier">Consumer'</span></a></a><span> </span><a name="local-6989586621679058223"><a href="#local-6989586621679058223"><span class="hs-identifier">a</span></a></a><span> </span><a name="local-6989586621679058224"><a href="#local-6989586621679058224"><span class="hs-identifier">m</span></a></a><span> </span><a name="local-6989586621679058225"><a href="#local-6989586621679058225"><span class="hs-identifier">r</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">forall</span><span> </span><a name="local-6989586621679058226"><a href="#local-6989586621679058226"><span class="hs-identifier">y'</span></a></a><span> </span><a name="local-6989586621679058227"><a href="#local-6989586621679058227"><span class="hs-identifier">y</span></a></a><span> </span><span class="hs-operator">.</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><a href="#local-6989586621679058223"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058226"><span class="hs-identifier hs-type">y'</span></a><span> </span><a href="#local-6989586621679058227"><span class="hs-identifier hs-type">y</span></a><span> </span><a href="#local-6989586621679058224"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058225"><span class="hs-identifier hs-type">r</span></a><span>
+</span><a name="line-766"></a><span>
+</span><a name="line-767"></a><span class="hs-comment">-- | Like 'Server', but with a polymorphic type</span><span>
+</span><a name="line-768"></a><span class="hs-keyword">type</span><span> </span><a name="Server%27"><a href="Pipes.Core.html#Server%27"><span class="hs-identifier">Server'</span></a></a><span> </span><a name="local-6989586621679058217"><a href="#local-6989586621679058217"><span class="hs-identifier">b'</span></a></a><span> </span><a name="local-6989586621679058218"><a href="#local-6989586621679058218"><span class="hs-identifier">b</span></a></a><span> </span><a name="local-6989586621679058219"><a href="#local-6989586621679058219"><span class="hs-identifier">m</span></a></a><span> </span><a name="local-6989586621679058220"><a href="#local-6989586621679058220"><span class="hs-identifier">r</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">forall</span><span> </span><a name="local-6989586621679058221"><a href="#local-6989586621679058221"><span class="hs-identifier">x'</span></a></a><span> </span><a name="local-6989586621679058222"><a href="#local-6989586621679058222"><span class="hs-identifier">x</span></a></a><span> </span><span class="hs-operator">.</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058221"><span class="hs-identifier hs-type">x'</span></a><span> </span><a href="#local-6989586621679058222"><span class="hs-identifier hs-type">x</span></a><span> </span><a href="#local-6989586621679058217"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058218"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058219"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058220"><span class="hs-identifier hs-type">r</span></a><span>
+</span><a name="line-769"></a><span>
+</span><a name="line-770"></a><span class="hs-comment">-- | Like 'Client', but with a polymorphic type</span><span>
+</span><a name="line-771"></a><span class="hs-keyword">type</span><span> </span><a name="Client%27"><a href="Pipes.Core.html#Client%27"><span class="hs-identifier">Client'</span></a></a><span> </span><a name="local-6989586621679058211"><a href="#local-6989586621679058211"><span class="hs-identifier">a'</span></a></a><span> </span><a name="local-6989586621679058212"><a href="#local-6989586621679058212"><span class="hs-identifier">a</span></a></a><span> </span><a name="local-6989586621679058213"><a href="#local-6989586621679058213"><span class="hs-identifier">m</span></a></a><span> </span><a name="local-6989586621679058214"><a href="#local-6989586621679058214"><span class="hs-identifier">r</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">forall</span><span> </span><a name="local-6989586621679058215"><a href="#local-6989586621679058215"><span class="hs-identifier">y'</span></a></a><span> </span><a name="local-6989586621679058216"><a href="#local-6989586621679058216"><span class="hs-identifier">y</span></a></a><span> </span><span class="hs-operator">.</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058211"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058212"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058215"><span class="hs-identifier hs-type">y'</span></a><span> </span><a href="#local-6989586621679058216"><span class="hs-identifier hs-type">y</span></a><span> </span><a href="#local-6989586621679058213"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058214"><span class="hs-identifier hs-type">r</span></a><span>
+</span><a name="line-772"></a><span>
+</span><a name="line-773"></a><span class="hs-comment">-- | Equivalent to ('/&gt;/') with the arguments flipped</span><span>
+</span><a name="line-774"></a><span class="hs-special">(</span><span class="hs-operator">\&lt;\</span><span class="hs-special">)</span><span>
+</span><a name="line-775"></a><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058304"><span class="hs-identifier hs-type">m</span></a><span>
+</span><a name="line-776"></a><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058305"><span class="hs-identifier hs-type">b</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058306"><span class="hs-identifier hs-type">x'</span></a><span> </span><a href="#local-6989586621679058307"><span class="hs-identifier hs-type">x</span></a><span> </span><a href="#local-6989586621679058308"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058309"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058304"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058310"><span class="hs-identifier hs-type">b'</span></a><span class="hs-special">)</span><span>
+</span><a name="line-777"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-778"></a><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058311"><span class="hs-identifier hs-type">a</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058306"><span class="hs-identifier hs-type">x'</span></a><span> </span><a href="#local-6989586621679058307"><span class="hs-identifier hs-type">x</span></a><span> </span><a href="#local-6989586621679058310"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058305"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058304"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058312"><span class="hs-identifier hs-type">a'</span></a><span class="hs-special">)</span><span>
+</span><a name="line-779"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-780"></a><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058311"><span class="hs-identifier hs-type">a</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058306"><span class="hs-identifier hs-type">x'</span></a><span> </span><a href="#local-6989586621679058307"><span class="hs-identifier hs-type">x</span></a><span> </span><a href="#local-6989586621679058308"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058309"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058304"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058312"><span class="hs-identifier hs-type">a'</span></a><span class="hs-special">)</span><span>
+</span><a name="line-781"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-782"></a><a name="local-6989586621679058490"><a href="#local-6989586621679058490"><span class="hs-identifier">p1</span></a></a><span> </span><a name="%5C%3C%5C"><a href="Pipes.Core.html#%5C%3C%5C"><span class="hs-operator">\&lt;\</span></a></a><span> </span><a name="local-6989586621679058491"><a href="#local-6989586621679058491"><span class="hs-identifier">p2</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="#local-6989586621679058491"><span class="hs-identifier hs-var">p2</span></a><span> </span><a href="Pipes.Core.html#%2F%3E%2F"><span class="hs-operator hs-var">/&gt;/</span></a><span> </span><a href="#local-6989586621679058490"><span class="hs-identifier hs-var">p1</span></a><span>
+</span><a name="line-783"></a><span class="hs-pragma">{-# INLINABLE (\&lt;\) #-}</span><span>
+</span><a name="line-784"></a><span>
+</span><a name="line-785"></a><span class="hs-comment">-- | Equivalent to ('\&gt;\') with the arguments flipped</span><span>
+</span><a name="line-786"></a><span class="hs-special">(</span><span class="hs-operator">/&lt;/</span><span class="hs-special">)</span><span>
+</span><a name="line-787"></a><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058295"><span class="hs-identifier hs-type">m</span></a><span>
+</span><a name="line-788"></a><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058296"><span class="hs-identifier hs-type">c'</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058297"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058298"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058299"><span class="hs-identifier hs-type">x'</span></a><span> </span><a href="#local-6989586621679058300"><span class="hs-identifier hs-type">x</span></a><span> </span><a href="#local-6989586621679058295"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058301"><span class="hs-identifier hs-type">c</span></a><span class="hs-special">)</span><span>
+</span><a name="line-789"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-790"></a><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058297"><span class="hs-identifier hs-type">b'</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058302"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058303"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058299"><span class="hs-identifier hs-type">x'</span></a><span> </span><a href="#local-6989586621679058300"><span class="hs-identifier hs-type">x</span></a><span> </span><a href="#local-6989586621679058295"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058298"><span class="hs-identifier hs-type">b</span></a><span class="hs-special">)</span><span>
+</span><a name="line-791"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-792"></a><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058296"><span class="hs-identifier hs-type">c'</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058302"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058303"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058299"><span class="hs-identifier hs-type">x'</span></a><span> </span><a href="#local-6989586621679058300"><span class="hs-identifier hs-type">x</span></a><span> </span><a href="#local-6989586621679058295"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058301"><span class="hs-identifier hs-type">c</span></a><span class="hs-special">)</span><span>
+</span><a name="line-793"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-794"></a><a name="local-6989586621679058492"><a href="#local-6989586621679058492"><span class="hs-identifier">p1</span></a></a><span> </span><a name="%2F%3C%2F"><a href="Pipes.Core.html#%2F%3C%2F"><span class="hs-operator">/&lt;/</span></a></a><span> </span><a name="local-6989586621679058493"><a href="#local-6989586621679058493"><span class="hs-identifier">p2</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="#local-6989586621679058493"><span class="hs-identifier hs-var">p2</span></a><span> </span><a href="Pipes.Core.html#%5C%3E%5C"><span class="hs-operator hs-var">\&gt;\</span></a><span> </span><a href="#local-6989586621679058492"><span class="hs-identifier hs-var">p1</span></a><span>
+</span><a name="line-795"></a><span class="hs-pragma">{-# INLINABLE (/&lt;/) #-}</span><span>
+</span><a name="line-796"></a><span>
+</span><a name="line-797"></a><span class="hs-comment">-- | Equivalent to ('&gt;~&gt;') with the arguments flipped</span><span>
+</span><a name="line-798"></a><span class="hs-special">(</span><span class="hs-operator">&lt;~&lt;</span><span class="hs-special">)</span><span>
+</span><a name="line-799"></a><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058287"><span class="hs-identifier hs-type">m</span></a><span>
+</span><a name="line-800"></a><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058288"><span class="hs-identifier hs-type">b</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058289"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058288"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058290"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058291"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058287"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058292"><span class="hs-identifier hs-type">r</span></a><span class="hs-special">)</span><span>
+</span><a name="line-801"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-802"></a><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058293"><span class="hs-identifier hs-type">a</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058294"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058293"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058289"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058288"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058287"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058292"><span class="hs-identifier hs-type">r</span></a><span class="hs-special">)</span><span>
+</span><a name="line-803"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-804"></a><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058293"><span class="hs-identifier hs-type">a</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058294"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058293"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058290"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058291"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058287"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058292"><span class="hs-identifier hs-type">r</span></a><span class="hs-special">)</span><span>
+</span><a name="line-805"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-806"></a><a name="local-6989586621679058494"><a href="#local-6989586621679058494"><span class="hs-identifier">p1</span></a></a><span> </span><a name="%3C~%3C"><a href="Pipes.Core.html#%3C~%3C"><span class="hs-operator">&lt;~&lt;</span></a></a><span> </span><a name="local-6989586621679058495"><a href="#local-6989586621679058495"><span class="hs-identifier">p2</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="#local-6989586621679058495"><span class="hs-identifier hs-var">p2</span></a><span> </span><a href="Pipes.Core.html#%3E~%3E"><span class="hs-operator hs-var">&gt;~&gt;</span></a><span> </span><a href="#local-6989586621679058494"><span class="hs-identifier hs-var">p1</span></a><span>
+</span><a name="line-807"></a><span class="hs-pragma">{-# INLINABLE (&lt;~&lt;) #-}</span><span>
+</span><a name="line-808"></a><span>
+</span><a name="line-809"></a><span class="hs-comment">-- | Equivalent to ('&gt;+&gt;') with the arguments flipped</span><span>
+</span><a name="line-810"></a><span class="hs-special">(</span><span class="hs-operator">&lt;+&lt;</span><span class="hs-special">)</span><span>
+</span><a name="line-811"></a><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058279"><span class="hs-identifier hs-type">m</span></a><span>
+</span><a name="line-812"></a><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058280"><span class="hs-identifier hs-type">c'</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058281"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058282"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058280"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058283"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058279"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058284"><span class="hs-identifier hs-type">r</span></a><span class="hs-special">)</span><span>
+</span><a name="line-813"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-814"></a><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058281"><span class="hs-identifier hs-type">b'</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058285"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058286"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058281"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058282"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058279"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058284"><span class="hs-identifier hs-type">r</span></a><span class="hs-special">)</span><span>
+</span><a name="line-815"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-816"></a><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058280"><span class="hs-identifier hs-type">c'</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058285"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058286"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058280"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058283"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058279"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058284"><span class="hs-identifier hs-type">r</span></a><span class="hs-special">)</span><span>
+</span><a name="line-817"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-818"></a><a name="local-6989586621679058496"><a href="#local-6989586621679058496"><span class="hs-identifier">p1</span></a></a><span> </span><a name="%3C%2B%3C"><a href="Pipes.Core.html#%3C%2B%3C"><span class="hs-operator">&lt;+&lt;</span></a></a><span> </span><a name="local-6989586621679058497"><a href="#local-6989586621679058497"><span class="hs-identifier">p2</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="#local-6989586621679058497"><span class="hs-identifier hs-var">p2</span></a><span> </span><a href="Pipes.Core.html#%3E%2B%3E"><span class="hs-operator hs-var">&gt;+&gt;</span></a><span> </span><a href="#local-6989586621679058496"><span class="hs-identifier hs-var">p1</span></a><span>
+</span><a name="line-819"></a><span class="hs-pragma">{-# INLINABLE (&lt;+&lt;) #-}</span><span>
+</span><a name="line-820"></a><span>
+</span><a name="line-821"></a><span class="hs-comment">-- | Equivalent to ('//&gt;') with the arguments flipped</span><span>
+</span><a name="line-822"></a><span class="hs-special">(</span><span class="hs-operator">&lt;\\</span><span class="hs-special">)</span><span>
+</span><a name="line-823"></a><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058271"><span class="hs-identifier hs-type">m</span></a><span>
+</span><a name="line-824"></a><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058272"><span class="hs-identifier hs-type">b</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058273"><span class="hs-identifier hs-type">x'</span></a><span> </span><a href="#local-6989586621679058274"><span class="hs-identifier hs-type">x</span></a><span> </span><a href="#local-6989586621679058275"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058276"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058271"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058277"><span class="hs-identifier hs-type">b'</span></a><span class="hs-special">)</span><span>
+</span><a name="line-825"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-826"></a><span>    </span><span class="hs-glyph">-&gt;</span><span>       </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058273"><span class="hs-identifier hs-type">x'</span></a><span> </span><a href="#local-6989586621679058274"><span class="hs-identifier hs-type">x</span></a><span> </span><a href="#local-6989586621679058277"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058272"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058271"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058278"><span class="hs-identifier hs-type">a'</span></a><span>
+</span><a name="line-827"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-828"></a><span>    </span><span class="hs-glyph">-&gt;</span><span>       </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058273"><span class="hs-identifier hs-type">x'</span></a><span> </span><a href="#local-6989586621679058274"><span class="hs-identifier hs-type">x</span></a><span> </span><a href="#local-6989586621679058275"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058276"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058271"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058278"><span class="hs-identifier hs-type">a'</span></a><span>
+</span><a name="line-829"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-830"></a><a name="local-6989586621679058498"><a href="#local-6989586621679058498"><span class="hs-identifier">f</span></a></a><span> </span><a name="%3C%5C%5C"><a href="Pipes.Core.html#%3C%5C%5C"><span class="hs-operator">&lt;\\</span></a></a><span> </span><a name="local-6989586621679058499"><a href="#local-6989586621679058499"><span class="hs-identifier">p</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="#local-6989586621679058499"><span class="hs-identifier hs-var">p</span></a><span> </span><a href="Pipes.Core.html#%2F%2F%3E"><span class="hs-operator hs-var">//&gt;</span></a><span> </span><a href="#local-6989586621679058498"><span class="hs-identifier hs-var">f</span></a><span>
+</span><a name="line-831"></a><span class="hs-pragma">{-# INLINABLE (&lt;\\) #-}</span><span>
+</span><a name="line-832"></a><span>
+</span><a name="line-833"></a><span class="hs-comment">-- | Equivalent to ('&gt;\\') with the arguments flipped</span><span>
+</span><a name="line-834"></a><span class="hs-special">(</span><span class="hs-operator">//&lt;</span><span class="hs-special">)</span><span>
+</span><a name="line-835"></a><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058263"><span class="hs-identifier hs-type">m</span></a><span>
+</span><a name="line-836"></a><span>    </span><span class="hs-glyph">=&gt;</span><span>        </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058264"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058265"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058266"><span class="hs-identifier hs-type">y'</span></a><span> </span><a href="#local-6989586621679058267"><span class="hs-identifier hs-type">y</span></a><span> </span><a href="#local-6989586621679058263"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058268"><span class="hs-identifier hs-type">c</span></a><span>
+</span><a name="line-837"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-838"></a><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058264"><span class="hs-identifier hs-type">b'</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058269"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058270"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058266"><span class="hs-identifier hs-type">y'</span></a><span> </span><a href="#local-6989586621679058267"><span class="hs-identifier hs-type">y</span></a><span> </span><a href="#local-6989586621679058263"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058265"><span class="hs-identifier hs-type">b</span></a><span class="hs-special">)</span><span>
+</span><a name="line-839"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-840"></a><span>    </span><span class="hs-glyph">-&gt;</span><span>        </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058269"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058270"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058266"><span class="hs-identifier hs-type">y'</span></a><span> </span><a href="#local-6989586621679058267"><span class="hs-identifier hs-type">y</span></a><span> </span><a href="#local-6989586621679058263"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058268"><span class="hs-identifier hs-type">c</span></a><span>
+</span><a name="line-841"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-842"></a><a name="local-6989586621679058500"><a href="#local-6989586621679058500"><span class="hs-identifier">p</span></a></a><span> </span><a name="%2F%2F%3C"><a href="Pipes.Core.html#%2F%2F%3C"><span class="hs-operator">//&lt;</span></a></a><span> </span><a name="local-6989586621679058501"><a href="#local-6989586621679058501"><span class="hs-identifier">f</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="#local-6989586621679058501"><span class="hs-identifier hs-var">f</span></a><span> </span><a href="Pipes.Core.html#%3E%5C%5C"><span class="hs-operator hs-var">&gt;\\</span></a><span> </span><a href="#local-6989586621679058500"><span class="hs-identifier hs-var">p</span></a><span>
+</span><a name="line-843"></a><span class="hs-pragma">{-# INLINABLE (//&lt;) #-}</span><span>
+</span><a name="line-844"></a><span>
+</span><a name="line-845"></a><span class="hs-comment">-- | Equivalent to ('&gt;&gt;~') with the arguments flipped</span><span>
+</span><a name="line-846"></a><span class="hs-special">(</span><span class="hs-operator">~&lt;&lt;</span><span class="hs-special">)</span><span>
+</span><a name="line-847"></a><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058255"><span class="hs-identifier hs-type">m</span></a><span>
+</span><a name="line-848"></a><span>    </span><span class="hs-glyph">=&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058256"><span class="hs-identifier hs-type">b</span></a><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058257"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058256"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058258"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058259"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058255"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058260"><span class="hs-identifier hs-type">r</span></a><span class="hs-special">)</span><span>
+</span><a name="line-849"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-850"></a><span>    </span><span class="hs-glyph">-&gt;</span><span>        </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058261"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058262"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058257"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058256"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058255"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058260"><span class="hs-identifier hs-type">r</span></a><span>
+</span><a name="line-851"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-852"></a><span>    </span><span class="hs-glyph">-&gt;</span><span>        </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058261"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058262"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058258"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058259"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058255"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058260"><span class="hs-identifier hs-type">r</span></a><span>
+</span><a name="line-853"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-854"></a><a name="local-6989586621679058502"><a href="#local-6989586621679058502"><span class="hs-identifier">k</span></a></a><span> </span><a name="~%3C%3C"><a href="Pipes.Core.html#~%3C%3C"><span class="hs-operator">~&lt;&lt;</span></a></a><span> </span><a name="local-6989586621679058503"><a href="#local-6989586621679058503"><span class="hs-identifier">p</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="#local-6989586621679058503"><span class="hs-identifier hs-var">p</span></a><span> </span><a href="Pipes.Core.html#%3E%3E~"><span class="hs-operator hs-var">&gt;&gt;~</span></a><span> </span><a href="#local-6989586621679058502"><span class="hs-identifier hs-var">k</span></a><span>
+</span><a name="line-855"></a><span class="hs-pragma">{-# INLINABLE (~&lt;&lt;) #-}</span><span>
+</span><a name="line-856"></a><span>
+</span><a name="line-857"></a><span class="hs-comment">-- | Equivalent to ('+&gt;&gt;') with the arguments flipped</span><span>
+</span><a name="line-858"></a><span class="hs-special">(</span><span class="hs-operator">&lt;&lt;+</span><span class="hs-special">)</span><span>
+</span><a name="line-859"></a><span>    </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Monad</span><span> </span><a href="#local-6989586621679058247"><span class="hs-identifier hs-type">m</span></a><span>
+</span><a name="line-860"></a><span>    </span><span class="hs-glyph">=&gt;</span><span>         </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058248"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058249"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058250"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058251"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058247"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058252"><span class="hs-identifier hs-type">r</span></a><span>
+</span><a name="line-861"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-862"></a><span>    </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679058248"><span class="hs-identifier hs-type">b'</span></a><span>  </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058253"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058254"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058248"><span class="hs-identifier hs-type">b'</span></a><span> </span><a href="#local-6989586621679058249"><span class="hs-identifier hs-type">b</span></a><span> </span><a href="#local-6989586621679058247"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058252"><span class="hs-identifier hs-type">r</span></a><span class="hs-special">)</span><span>
+</span><a name="line-863"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-864"></a><span>    </span><span class="hs-glyph">-&gt;</span><span>         </span><a href="Pipes.Internal.html#Proxy"><span class="hs-identifier hs-type">Proxy</span></a><span> </span><a href="#local-6989586621679058253"><span class="hs-identifier hs-type">a'</span></a><span> </span><a href="#local-6989586621679058254"><span class="hs-identifier hs-type">a</span></a><span> </span><a href="#local-6989586621679058250"><span class="hs-identifier hs-type">c'</span></a><span> </span><a href="#local-6989586621679058251"><span class="hs-identifier hs-type">c</span></a><span> </span><a href="#local-6989586621679058247"><span class="hs-identifier hs-type">m</span></a><span> </span><a href="#local-6989586621679058252"><span class="hs-identifier hs-type">r</span></a><span>
+</span><a name="line-865"></a><span>    </span><span class="hs-comment">-- ^</span><span>
+</span><a name="line-866"></a><a name="local-6989586621679058504"><a href="#local-6989586621679058504"><span class="hs-identifier">k</span></a></a><span> </span><a name="%3C%3C%2B"><a href="Pipes.Core.html#%3C%3C%2B"><span class="hs-operator">&lt;&lt;+</span></a></a><span> </span><a name="local-6989586621679058505"><a href="#local-6989586621679058505"><span class="hs-identifier">p</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="#local-6989586621679058505"><span class="hs-identifier hs-var">p</span></a><span> </span><a href="Pipes.Core.html#%2B%3E%3E"><span class="hs-operator hs-var">+&gt;&gt;</span></a><span> </span><a href="#local-6989586621679058504"><span class="hs-identifier hs-var">k</span></a><span>
+</span><a name="line-867"></a><span class="hs-pragma">{-# INLINABLE (&lt;&lt;+) #-}</span><span>
+</span><a name="line-868"></a><span>
+</span><a name="line-869"></a><span class="hs-pragma">{-# RULES
+    &quot;(p //&gt; f) //&gt; g&quot; forall p f g . (p //&gt; f) //&gt; g = p //&gt; (\x -&gt; f x //&gt; g)
+
+  ; &quot;p //&gt; respond&quot; forall p . p //&gt; respond = p
+
+  ; &quot;respond x //&gt; f&quot; forall x f . respond x //&gt;  f = f x
+
+  ; &quot;f &gt;\\ (g &gt;\\ p)&quot; forall f g p . f &gt;\\ (g &gt;\\ p) = (\x -&gt; f &gt;\\ g x) &gt;\\ p
+
+  ; &quot;request &gt;\\ p&quot; forall p . request &gt;\\ p = p
+
+  ; &quot;f &gt;\\ request x&quot; forall f x . f &gt;\\ request x = f x
+
+  ; &quot;(p &gt;&gt;~ f) &gt;&gt;~ g&quot; forall p f g . (p &gt;&gt;~ f) &gt;&gt;~ g = p &gt;&gt;~ (\x -&gt; f x &gt;&gt;~ g)
+
+  ; &quot;p &gt;&gt;~ push&quot; forall p . p &gt;&gt;~ push = p
+
+  ; &quot;push x &gt;&gt;~ f&quot; forall x f . push x &gt;&gt;~ f = f x
+
+  ; &quot;f +&gt;&gt; (g +&gt;&gt; p)&quot; forall f g p . f +&gt;&gt; (g +&gt;&gt; p) = (\x -&gt; f +&gt;&gt; g x) +&gt;&gt; p
+
+  ; &quot;pull +&gt;&gt; p&quot; forall p . pull +&gt;&gt; p = p
+
+  ; &quot;f +&gt;&gt; pull x&quot; forall f x . f +&gt;&gt; pull x = f x
+
+  #-}</span><span>
+</span><a name="line-895"></a></pre></body></html>

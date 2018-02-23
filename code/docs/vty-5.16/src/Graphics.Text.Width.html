@@ -1,0 +1,34 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-comment">-- Copyright 2009 Corey O'Connor</span><span>
+</span><a name="line-2"></a><span class="hs-pragma">{-# OPTIONS_GHC -D_XOPEN_SOURCE #-}</span><span>
+</span><a name="line-3"></a><span class="hs-pragma">{-# LANGUAGE ForeignFunctionInterface #-}</span><span>
+</span><a name="line-4"></a><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Graphics</span><span class="hs-operator">.</span><span class="hs-identifier">Text</span><span class="hs-operator">.</span><span class="hs-identifier">Width</span><span>
+</span><a name="line-5"></a><span>  </span><span class="hs-special">(</span><span> </span><a href="Graphics.Text.Width.html#wcwidth"><span class="hs-identifier hs-var">wcwidth</span></a><span>
+</span><a name="line-6"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Text.Width.html#wcswidth"><span class="hs-identifier hs-var">wcswidth</span></a><span>
+</span><a name="line-7"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Text.Width.html#safeWcwidth"><span class="hs-identifier hs-var">safeWcwidth</span></a><span>
+</span><a name="line-8"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Text.Width.html#safeWcswidth"><span class="hs-identifier hs-var">safeWcswidth</span></a><span>
+</span><a name="line-9"></a><span>  </span><span class="hs-special">)</span><span>
+</span><a name="line-10"></a><span class="hs-keyword">where</span><span>
+</span><a name="line-11"></a><span>
+</span><a name="line-12"></a><span class="hs-identifier">foreign</span><span> </span><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">ccall</span><span> </span><span class="hs-identifier">unsafe</span><span> </span><span class="hs-string">&quot;vty_mk_wcwidth&quot;</span><span> </span><span class="hs-identifier">wcwidth</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Char</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">Int</span><span>
+</span><a name="line-13"></a><span>
+</span><a name="line-14"></a><span class="hs-identifier">wcswidth</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">String</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">Int</span><span>
+</span><a name="line-15"></a><a name="wcswidth"><a href="Graphics.Text.Width.html#wcswidth"><span class="hs-identifier">wcswidth</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">sum</span><span> </span><span class="hs-operator hs-var">.</span><span> </span><span class="hs-identifier hs-var">map</span><span> </span><a href="Graphics.Text.Width.html#wcwidth"><span class="hs-identifier hs-var">wcwidth</span></a><span>
+</span><a name="line-16"></a><span>
+</span><a name="line-17"></a><span class="hs-comment">-- XXX: Characters with unknown widths occupy 1 column?</span><span>
+</span><a name="line-18"></a><span class="hs-comment">--</span><span>
+</span><a name="line-19"></a><span class="hs-comment">-- Not sure if this is actually correct. I presume there is a</span><span>
+</span><a name="line-20"></a><span class="hs-comment">-- replacement character that is output by the terminal instead of the</span><span>
+</span><a name="line-21"></a><span class="hs-comment">-- character and this replacement character is 1 column wide. If this is</span><span>
+</span><a name="line-22"></a><span class="hs-comment">-- not true for all terminals then a per-terminal replacement character</span><span>
+</span><a name="line-23"></a><span class="hs-comment">-- width needs to be implemented.</span><span>
+</span><a name="line-24"></a><span>
+</span><a name="line-25"></a><span class="hs-comment">-- | Returns the display width of a character. Assumes all characters</span><span>
+</span><a name="line-26"></a><span class="hs-comment">-- with unknown widths are 0 width.</span><span>
+</span><a name="line-27"></a><span class="hs-identifier">safeWcwidth</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Char</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">Int</span><span>
+</span><a name="line-28"></a><a name="safeWcwidth"><a href="Graphics.Text.Width.html#safeWcwidth"><span class="hs-identifier">safeWcwidth</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">max</span><span> </span><span class="hs-number">0</span><span> </span><span class="hs-operator hs-var">.</span><span> </span><a href="Graphics.Text.Width.html#wcwidth"><span class="hs-identifier hs-var">wcwidth</span></a><span>
+</span><a name="line-29"></a><span>
+</span><a name="line-30"></a><span class="hs-comment">-- | Returns the display width of a string. Assumes all characters with</span><span>
+</span><a name="line-31"></a><span class="hs-comment">-- unknown widths are 0 width.</span><span>
+</span><a name="line-32"></a><span class="hs-identifier">safeWcswidth</span><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">String</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">Int</span><span>
+</span><a name="line-33"></a><a name="safeWcswidth"><a href="Graphics.Text.Width.html#safeWcswidth"><span class="hs-identifier">safeWcswidth</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">sum</span><span> </span><span class="hs-operator hs-var">.</span><span> </span><span class="hs-identifier hs-var">map</span><span> </span><a href="Graphics.Text.Width.html#safeWcwidth"><span class="hs-identifier hs-var">safeWcwidth</span></a><span>
+</span><a name="line-34"></a></pre></body></html>

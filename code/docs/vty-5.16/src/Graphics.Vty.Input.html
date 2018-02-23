@@ -1,0 +1,186 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><a name="line-2"></a><span>
+</span><a name="line-3"></a><span class="hs-comment">-- | This module provides the input layer for Vty, including methods</span><span>
+</span><a name="line-4"></a><span class="hs-comment">-- for initializing an 'Input' structure and reading 'Event's from the</span><span>
+</span><a name="line-5"></a><span class="hs-comment">-- terminal.</span><span>
+</span><a name="line-6"></a><span class="hs-comment">--</span><span>
+</span><a name="line-7"></a><span class="hs-comment">-- Note that due to the evolution of terminal emulators, some keys</span><span>
+</span><a name="line-8"></a><span class="hs-comment">-- and combinations will not reliably map to the expected events by</span><span>
+</span><a name="line-9"></a><span class="hs-comment">-- any terminal program. There is no 1:1 mapping from key events to</span><span>
+</span><a name="line-10"></a><span class="hs-comment">-- bytes read from the terminal input device. In very limited cases the</span><span>
+</span><a name="line-11"></a><span class="hs-comment">-- terminal and vty's input process can be customized to resolve these</span><span>
+</span><a name="line-12"></a><span class="hs-comment">-- issues; see &quot;Graphics.Vty.Config&quot; for how to configure vty's input</span><span>
+</span><a name="line-13"></a><span class="hs-comment">-- processing.</span><span>
+</span><a name="line-14"></a><span class="hs-comment">--</span><span>
+</span><a name="line-15"></a><span class="hs-comment">-- = VTY's Implementation</span><span>
+</span><a name="line-16"></a><span class="hs-comment">--</span><span>
+</span><a name="line-17"></a><span class="hs-comment">-- There are two input modes:</span><span>
+</span><a name="line-18"></a><span class="hs-comment">--</span><span>
+</span><a name="line-19"></a><span class="hs-comment">--  1. 7-bit</span><span>
+</span><a name="line-20"></a><span class="hs-comment">--</span><span>
+</span><a name="line-21"></a><span class="hs-comment">--  2. 8-bit</span><span>
+</span><a name="line-22"></a><span class="hs-comment">--</span><span>
+</span><a name="line-23"></a><span class="hs-comment">-- The 7-bit input mode is the default and the expected mode in most use</span><span>
+</span><a name="line-24"></a><span class="hs-comment">-- cases. This is what Vty uses.</span><span>
+</span><a name="line-25"></a><span class="hs-comment">--</span><span>
+</span><a name="line-26"></a><span class="hs-comment">-- == 7-bit input encoding</span><span>
+</span><a name="line-27"></a><span class="hs-comment">--</span><span>
+</span><a name="line-28"></a><span class="hs-comment">-- Control key combinations are represented by masking the two high bits</span><span>
+</span><a name="line-29"></a><span class="hs-comment">-- of the 7-bit input. Historically the control key actually grounded</span><span>
+</span><a name="line-30"></a><span class="hs-comment">-- the two high bit wires: 6 and 7. This is why control key combos</span><span>
+</span><a name="line-31"></a><span class="hs-comment">-- map to single character events: the input bytes are identical. The</span><span>
+</span><a name="line-32"></a><span class="hs-comment">-- input byte is the bit encoding of the character with bits 6 and 7</span><span>
+</span><a name="line-33"></a><span class="hs-comment">-- masked. Bit 6 is set by shift. Bit 6 and 7 are masked by control. For</span><span>
+</span><a name="line-34"></a><span class="hs-comment">-- example,</span><span>
+</span><a name="line-35"></a><span class="hs-comment">--</span><span>
+</span><a name="line-36"></a><span class="hs-comment">-- * Control-I is 'i', `01101001`, and has bit 6 and 7 masked to become</span><span>
+</span><a name="line-37"></a><span class="hs-comment">-- `00001001`, which is the ASCII and UTF-8 encoding of the Tab key.</span><span>
+</span><a name="line-38"></a><span class="hs-comment">--</span><span>
+</span><a name="line-39"></a><span class="hs-comment">-- * Control+Shift-C is 'C', `01000011`, with bit 6 and 7 set to zero</span><span>
+</span><a name="line-40"></a><span class="hs-comment">-- which is `0000011` and is the &quot;End of Text&quot; code.</span><span>
+</span><a name="line-41"></a><span class="hs-comment">--</span><span>
+</span><a name="line-42"></a><span class="hs-comment">-- * Hypothesis: This is why capital-A, 'A', has value 65 in ASCII: this</span><span>
+</span><a name="line-43"></a><span class="hs-comment">-- is the value 1 with bit 7 set and 6 unset.</span><span>
+</span><a name="line-44"></a><span class="hs-comment">--</span><span>
+</span><a name="line-45"></a><span class="hs-comment">-- * Hypothesis: Bit 6 is unset by upper case letters because,</span><span>
+</span><a name="line-46"></a><span class="hs-comment">-- initially, there were only upper case letters used and a 5 bit</span><span>
+</span><a name="line-47"></a><span class="hs-comment">-- encoding.</span><span>
+</span><a name="line-48"></a><span class="hs-comment">--</span><span>
+</span><a name="line-49"></a><span class="hs-comment">-- == 8-bit encoding</span><span>
+</span><a name="line-50"></a><span class="hs-comment">--</span><span>
+</span><a name="line-51"></a><span class="hs-comment">-- The 8th bit was originally used for parity checking which is useless</span><span>
+</span><a name="line-52"></a><span class="hs-comment">-- for terminal emulators. Some terminal emulators support an 8-bit</span><span>
+</span><a name="line-53"></a><span class="hs-comment">-- input encoding. While this provides some advantages, the actual usage</span><span>
+</span><a name="line-54"></a><span class="hs-comment">-- is low. Most systems use 7-bit mode but recognize 8-bit control</span><span>
+</span><a name="line-55"></a><span class="hs-comment">-- characters when escaped. This is what Vty does.</span><span>
+</span><a name="line-56"></a><span class="hs-comment">--</span><span>
+</span><a name="line-57"></a><span class="hs-comment">-- == Escaped Control Keys</span><span>
+</span><a name="line-58"></a><span class="hs-comment">--</span><span>
+</span><a name="line-59"></a><span class="hs-comment">-- Using 7-bit input encoding, the @ESC@ byte can signal the start of</span><span>
+</span><a name="line-60"></a><span class="hs-comment">-- an encoded control key. To differentiate a single @ESC@ event from a</span><span>
+</span><a name="line-61"></a><span class="hs-comment">-- control key, the timing of the input is used.</span><span>
+</span><a name="line-62"></a><span class="hs-comment">--</span><span>
+</span><a name="line-63"></a><span class="hs-comment">-- 1. @ESC@ individually: @ESC@ byte; no bytes following for a period of</span><span>
+</span><a name="line-64"></a><span class="hs-comment">-- 'VMIN' milliseconds.</span><span>
+</span><a name="line-65"></a><span class="hs-comment">--</span><span>
+</span><a name="line-66"></a><span class="hs-comment">-- 2. Control keys that contain @ESC@ in their encoding: The @ESC byte</span><span>
+</span><a name="line-67"></a><span class="hs-comment">-- is followed by more bytes read within 'VMIN' milliseconds. All bytes</span><span>
+</span><a name="line-68"></a><span class="hs-comment">-- up until the next valid input block are passed to the classifier.</span><span>
+</span><a name="line-69"></a><span class="hs-comment">--</span><span>
+</span><a name="line-70"></a><span class="hs-comment">-- If the current runtime is the threaded runtime then the terminal's</span><span>
+</span><a name="line-71"></a><span class="hs-comment">-- @VMIN@ and @VTIME@ behavior reliably implement the above rules. If</span><span>
+</span><a name="line-72"></a><span class="hs-comment">-- the current runtime does not support 'forkOS' then there is currently</span><span>
+</span><a name="line-73"></a><span class="hs-comment">-- no implementation.</span><span>
+</span><a name="line-74"></a><span class="hs-comment">--</span><span>
+</span><a name="line-75"></a><span class="hs-comment">-- == Unicode Input and Escaped Control Key Sequences</span><span>
+</span><a name="line-76"></a><span class="hs-comment">--</span><span>
+</span><a name="line-77"></a><span class="hs-comment">-- The input encoding determines how UTF-8 encoded characters are</span><span>
+</span><a name="line-78"></a><span class="hs-comment">-- recognized.</span><span>
+</span><a name="line-79"></a><span class="hs-comment">--</span><span>
+</span><a name="line-80"></a><span class="hs-comment">-- * 7-bit mode: UTF-8 can be input unambiguiously. UTF-8 input is</span><span>
+</span><a name="line-81"></a><span class="hs-comment">-- a superset of ASCII. UTF-8 does not overlap escaped control key</span><span>
+</span><a name="line-82"></a><span class="hs-comment">-- sequences. However, the escape key must be differentiated from</span><span>
+</span><a name="line-83"></a><span class="hs-comment">-- escaped control key sequences by the timing of the input bytes.</span><span>
+</span><a name="line-84"></a><span class="hs-comment">--</span><span>
+</span><a name="line-85"></a><span class="hs-comment">-- * 8-bit mode: UTF-8 cannot be input unambiguously. This does not</span><span>
+</span><a name="line-86"></a><span class="hs-comment">-- require using the timing of input bytes to differentiate the escape</span><span>
+</span><a name="line-87"></a><span class="hs-comment">-- key. Many terminals do not support 8-bit mode.</span><span>
+</span><a name="line-88"></a><span class="hs-comment">--</span><span>
+</span><a name="line-89"></a><span class="hs-comment">-- == Terminfo</span><span>
+</span><a name="line-90"></a><span class="hs-comment">--</span><span>
+</span><a name="line-91"></a><span class="hs-comment">-- The terminfo system is used to determine how some keys are encoded.</span><span>
+</span><a name="line-92"></a><span class="hs-comment">-- Terminfo is incomplete and in some cases terminfo is incorrect. Vty</span><span>
+</span><a name="line-93"></a><span class="hs-comment">-- assumes terminfo is correct but provides a mechanism to override</span><span>
+</span><a name="line-94"></a><span class="hs-comment">-- terminfo; see &quot;Graphics.Vty.Config&quot;, specifically 'inputOverrides'.</span><span>
+</span><a name="line-95"></a><span class="hs-comment">--</span><span>
+</span><a name="line-96"></a><span class="hs-comment">-- == Terminal Input is Broken</span><span>
+</span><a name="line-97"></a><span class="hs-comment">--</span><span>
+</span><a name="line-98"></a><span class="hs-comment">-- Clearly terminal input has fundemental issues. There is no easy way</span><span>
+</span><a name="line-99"></a><span class="hs-comment">-- to reliably resolve these issues.</span><span>
+</span><a name="line-100"></a><span class="hs-comment">--</span><span>
+</span><a name="line-101"></a><span class="hs-comment">-- One resolution would be to ditch standard terminal interfaces</span><span>
+</span><a name="line-102"></a><span class="hs-comment">-- entirely and just go directly to scancodes. This would be a</span><span>
+</span><a name="line-103"></a><span class="hs-comment">-- reasonable option for Vty if everybody used the linux kernel console</span><span>
+</span><a name="line-104"></a><span class="hs-comment">-- but for obvious reasons this is not possible.</span><span>
+</span><a name="line-105"></a><span class="hs-comment">--</span><span>
+</span><a name="line-106"></a><span class="hs-comment">-- The &quot;Graphics.Vty.Config&quot; module supports customizing the</span><span>
+</span><a name="line-107"></a><span class="hs-comment">-- input-byte-to-event mapping and xterm supports customizing the</span><span>
+</span><a name="line-108"></a><span class="hs-comment">-- scancode-to-input-byte mapping. With a lot of work a user's system</span><span>
+</span><a name="line-109"></a><span class="hs-comment">-- can be set up to encode all the key combos in an almost-sane manner.</span><span>
+</span><a name="line-110"></a><span class="hs-comment">--</span><span>
+</span><a name="line-111"></a><span class="hs-comment">-- == See also</span><span>
+</span><a name="line-112"></a><span class="hs-comment">--</span><span>
+</span><a name="line-113"></a><span class="hs-comment">-- * http://www.leonerd.org.uk/hacks/fixterms/</span><span>
+</span><a name="line-114"></a><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Graphics</span><span class="hs-operator">.</span><span class="hs-identifier">Vty</span><span class="hs-operator">.</span><span class="hs-identifier">Input</span><span>
+</span><a name="line-115"></a><span>  </span><span class="hs-special">(</span><span> </span><a href="Graphics.Vty.Input.Events.html#Key"><span class="hs-identifier hs-type">Key</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-116"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Vty.Input.Events.html#Modifier"><span class="hs-identifier hs-type">Modifier</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-117"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Vty.Input.Events.html#Button"><span class="hs-identifier hs-type">Button</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-118"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Vty.Input.Events.html#Event"><span class="hs-identifier hs-type">Event</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-119"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Vty.Input.Loop.html#Input"><span class="hs-identifier hs-type">Input</span></a><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span>
+</span><a name="line-120"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Graphics.Vty.Input.html#inputForConfig"><span class="hs-identifier hs-var">inputForConfig</span></a><span>
+</span><a name="line-121"></a><span>  </span><span class="hs-special">)</span><span>
+</span><a name="line-122"></a><span class="hs-keyword">where</span><span>
+</span><a name="line-123"></a><span>
+</span><a name="line-124"></a><span class="hs-keyword">import</span><span> </span><a href="Graphics.Vty.Config.html"><span class="hs-identifier">Graphics</span><span class="hs-operator">.</span><span class="hs-identifier">Vty</span><span class="hs-operator">.</span><span class="hs-identifier">Config</span></a><span>
+</span><a name="line-125"></a><span class="hs-keyword">import</span><span> </span><a href="Graphics.Vty.Input.Events.html"><span class="hs-identifier">Graphics</span><span class="hs-operator">.</span><span class="hs-identifier">Vty</span><span class="hs-operator">.</span><span class="hs-identifier">Input</span><span class="hs-operator">.</span><span class="hs-identifier">Events</span></a><span>
+</span><a name="line-126"></a><span class="hs-keyword">import</span><span> </span><a href="Graphics.Vty.Input.Loop.html"><span class="hs-identifier">Graphics</span><span class="hs-operator">.</span><span class="hs-identifier">Vty</span><span class="hs-operator">.</span><span class="hs-identifier">Input</span><span class="hs-operator">.</span><span class="hs-identifier">Loop</span></a><span>
+</span><a name="line-127"></a><span class="hs-keyword">import</span><span> </span><a href="Graphics.Vty.Input.Terminfo.html"><span class="hs-identifier">Graphics</span><span class="hs-operator">.</span><span class="hs-identifier">Vty</span><span class="hs-operator">.</span><span class="hs-identifier">Input</span><span class="hs-operator">.</span><span class="hs-identifier">Terminfo</span></a><span>
+</span><a name="line-128"></a><span>
+</span><a name="line-129"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Control</span><span class="hs-operator">.</span><span class="hs-identifier">Concurrent</span><span class="hs-operator">.</span><span class="hs-identifier">STM</span><span>
+</span><a name="line-130"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Lens</span><span class="hs-operator">.</span><span class="hs-identifier">Micro</span><span>
+</span><a name="line-131"></a><span>
+</span><a name="line-132"></a><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">System</span><span class="hs-operator">.</span><span class="hs-identifier">Console</span><span class="hs-operator">.</span><span class="hs-identifier">Terminfo</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">Terminfo</span><span>
+</span><a name="line-133"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">System</span><span class="hs-operator">.</span><span class="hs-identifier">Posix</span><span class="hs-operator">.</span><span class="hs-identifier">Signals</span><span class="hs-operator">.</span><span class="hs-identifier">Exts</span><span>
+</span><a name="line-134"></a><span>
+</span><a name="line-135"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data</span><span class="hs-operator">.</span><span class="hs-identifier">Monoid</span><span> </span><span class="hs-special">(</span><span class="hs-special">(</span><span class="hs-operator hs-var">&lt;&gt;</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a name="line-136"></a><span>
+</span><a name="line-137"></a><span class="hs-comment">-- | Set up the terminal with file descriptor `inputFd` for input.</span><span>
+</span><a name="line-138"></a><span class="hs-comment">-- Returns an 'Input'.</span><span>
+</span><a name="line-139"></a><span class="hs-comment">--</span><span>
+</span><a name="line-140"></a><span class="hs-comment">-- The table used to determine the 'Events' to produce for the input</span><span>
+</span><a name="line-141"></a><span class="hs-comment">-- bytes comes from 'classifyMapForTerm' which is then overridden by</span><span>
+</span><a name="line-142"></a><span class="hs-comment">-- the the applicable entries from the configuration's 'inputMap'.</span><span>
+</span><a name="line-143"></a><span class="hs-comment">--</span><span>
+</span><a name="line-144"></a><span class="hs-comment">-- The terminal device is configured with the attributes:</span><span>
+</span><a name="line-145"></a><span class="hs-comment">--</span><span>
+</span><a name="line-146"></a><span class="hs-comment">-- * IXON disabled: disables software flow control on outgoing data.</span><span>
+</span><a name="line-147"></a><span class="hs-comment">-- This stops the process from being suspended if the output terminal</span><span>
+</span><a name="line-148"></a><span class="hs-comment">-- cannot keep up.</span><span>
+</span><a name="line-149"></a><span class="hs-comment">--</span><span>
+</span><a name="line-150"></a><span class="hs-comment">-- * Raw mode is used for input.</span><span>
+</span><a name="line-151"></a><span class="hs-comment">--</span><span>
+</span><a name="line-152"></a><span class="hs-comment">-- * ISIG disabled (enables keyboard combinations that result in</span><span>
+</span><a name="line-153"></a><span class="hs-comment">-- signals)</span><span>
+</span><a name="line-154"></a><span class="hs-comment">--</span><span>
+</span><a name="line-155"></a><span class="hs-comment">-- * ECHO disabled (input is not echoed to the output)</span><span>
+</span><a name="line-156"></a><span class="hs-comment">--</span><span>
+</span><a name="line-157"></a><span class="hs-comment">-- * ICANON disabled (canonical mode (line mode) input is not used)</span><span>
+</span><a name="line-158"></a><span class="hs-comment">--</span><span>
+</span><a name="line-159"></a><span class="hs-comment">-- * IEXTEN disabled (extended functions are disabled)</span><span>
+</span><a name="line-160"></a><span class="hs-identifier">inputForConfig</span><span> </span><span class="hs-glyph">::</span><span> </span><a href="Graphics.Vty.Config.html#Config"><span class="hs-identifier hs-type">Config</span></a><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="hs-identifier hs-type">IO</span><span> </span><a href="Graphics.Vty.Input.Loop.html#Input"><span class="hs-identifier hs-type">Input</span></a><span>
+</span><a name="line-161"></a><a name="inputForConfig"><a href="Graphics.Vty.Input.html#inputForConfig"><span class="hs-identifier">inputForConfig</span></a></a><span> </span><a name="local-6989586621679240557"><a href="#local-6989586621679240557"><span class="hs-identifier">config</span></a></a><span class="hs-glyph">@</span><a href="Graphics.Vty.Config.html#Config"><span class="hs-identifier hs-var">Config</span></a><span class="hs-special">{</span><span> </span><a name="local-6989586621679240560"><a href="#local-6989586621679240560"><span class="hs-identifier">termName</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">Just</span><span> </span><a name="local-6989586621679240558"><a href="#local-6989586621679240558"><span class="hs-identifier">termName</span></a></a><span>
+</span><a name="line-162"></a><span>                            </span><span class="hs-special">,</span><span> </span><a name="local-6989586621679240560"><a href="#local-6989586621679240560"><span class="hs-identifier">inputFd</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">Just</span><span> </span><a name="local-6989586621679240559"><a href="#local-6989586621679240559"><span class="hs-identifier">termFd</span></a></a><span>
+</span><a name="line-163"></a><span>                            </span><span class="hs-special">,</span><span> </span><a name="local-6989586621679240560"><a href="#local-6989586621679240560"><span class="hs-identifier">vmin</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">Just</span><span> </span><a name="local-6989586621679240560"><a href="#local-6989586621679240560"><span class="hs-identifier">_</span></a></a><span>
+</span><a name="line-164"></a><span>                            </span><span class="hs-special">,</span><span> </span><a name="local-6989586621679240560"><a href="#local-6989586621679240560"><span class="hs-identifier">vtime</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">Just</span><span> </span><a name="local-6989586621679240560"><a href="#local-6989586621679240560"><span class="hs-identifier">_</span></a></a><span>
+</span><a name="line-165"></a><span>                            </span><span class="hs-special">,</span><span> </span><span class="hs-glyph">..</span><span> </span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><a name="line-166"></a><span>    </span><a name="local-6989586621679240565"><a href="#local-6989586621679240565"><span class="hs-identifier">terminal</span></a></a><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-identifier hs-var">Terminfo</span><span class="hs-operator hs-var">.</span><span class="hs-identifier hs-var">setupTerm</span><span> </span><a href="#local-6989586621679240558"><span class="hs-identifier hs-var">termName</span></a><span>
+</span><a name="line-167"></a><span>    </span><span class="hs-keyword">let</span><span> </span><a name="local-6989586621679240566"><a href="#local-6989586621679240566"><span class="hs-identifier">inputOverrides</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><a href="#local-6989586621679240569"><span class="hs-identifier hs-var">s</span></a><span class="hs-special">,</span><a href="#local-6989586621679240570"><span class="hs-identifier hs-var">e</span></a><span class="hs-special">)</span><span> </span><span class="hs-glyph">|</span><span> </span><span class="hs-special">(</span><a name="local-6989586621679240568"><a href="#local-6989586621679240568"><span class="hs-identifier">t</span></a></a><span class="hs-special">,</span><a name="local-6989586621679240569"><a href="#local-6989586621679240569"><span class="hs-identifier">s</span></a></a><span class="hs-special">,</span><a name="local-6989586621679240570"><a href="#local-6989586621679240570"><span class="hs-identifier">e</span></a></a><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><a href="#local-6989586621679240563"><span class="hs-identifier hs-var">inputMap</span></a><span class="hs-special">,</span><span> </span><a href="#local-6989586621679240568"><span class="hs-identifier hs-var">t</span></a><span> </span><span class="hs-operator hs-var">==</span><span> </span><span class="hs-identifier hs-var">Nothing</span><span> </span><span class="hs-operator hs-var">||</span><span> </span><a href="#local-6989586621679240568"><span class="hs-identifier hs-var">t</span></a><span> </span><span class="hs-operator hs-var">==</span><span> </span><span class="hs-identifier hs-var">Just</span><span> </span><a href="#local-6989586621679240558"><span class="hs-identifier hs-var">termName</span></a><span class="hs-special">]</span><span>
+</span><a name="line-168"></a><span>        </span><a name="local-6989586621679240567"><a href="#local-6989586621679240567"><span class="hs-identifier">activeInputMap</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><a href="Graphics.Vty.Input.Terminfo.html#classifyMapForTerm"><span class="hs-identifier hs-var">classifyMapForTerm</span></a><span> </span><a href="#local-6989586621679240558"><span class="hs-identifier hs-var">termName</span></a><span> </span><a href="#local-6989586621679240565"><span class="hs-identifier hs-var">terminal</span></a><span> </span><span class="hs-special">`</span><span class="hs-identifier hs-var">mappend</span><span class="hs-special">`</span><span> </span><a href="#local-6989586621679240566"><span class="hs-identifier hs-var">inputOverrides</span></a><span>
+</span><a name="line-169"></a><span>    </span><span class="hs-special">(</span><a name="local-6989586621679240571"><a href="#local-6989586621679240571"><span class="hs-identifier">setAttrs</span></a></a><span class="hs-special">,</span><a name="local-6989586621679240572"><a href="#local-6989586621679240572"><span class="hs-identifier">unsetAttrs</span></a></a><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><a href="Graphics.Vty.Input.Loop.html#attributeControl"><span class="hs-identifier hs-var">attributeControl</span></a><span> </span><a href="#local-6989586621679240559"><span class="hs-identifier hs-var">termFd</span></a><span>
+</span><a name="line-170"></a><span>    </span><a href="#local-6989586621679240571"><span class="hs-identifier hs-var">setAttrs</span></a><span>
+</span><a name="line-171"></a><span>    </span><a name="local-6989586621679240573"><a href="#local-6989586621679240573"><span class="hs-identifier">input</span></a></a><span> </span><span class="hs-glyph">&lt;-</span><span> </span><a href="Graphics.Vty.Input.Loop.html#initInput"><span class="hs-identifier hs-var">initInput</span></a><span> </span><a href="#local-6989586621679240557"><span class="hs-identifier hs-var">config</span></a><span> </span><a href="#local-6989586621679240567"><span class="hs-identifier hs-var">activeInputMap</span></a><span>
+</span><a name="line-172"></a><span>    </span><span class="hs-keyword">let</span><span> </span><a name="local-6989586621679240574"><a href="#local-6989586621679240574"><span class="hs-identifier">pokeIO</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">Catch</span><span> </span><span class="hs-operator hs-var">$</span><span> </span><span class="hs-keyword">do</span><span>
+</span><a name="line-173"></a><span>            </span><span class="hs-keyword">let</span><span> </span><a name="local-6989586621679240892"><a href="#local-6989586621679240892"><span class="hs-identifier">e</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-identifier hs-var">error</span><span> </span><span class="hs-string">&quot;vty internal failure: this value should not propagate to users&quot;</span><span>
+</span><a name="line-174"></a><span>            </span><a href="#local-6989586621679240571"><span class="hs-identifier hs-var">setAttrs</span></a><span>
+</span><a name="line-175"></a><span>            </span><span class="hs-identifier hs-var">atomically</span><span> </span><span class="hs-operator hs-var">$</span><span> </span><span class="hs-identifier hs-var">writeTChan</span><span> </span><span class="hs-special">(</span><a href="#local-6989586621679240573"><span class="hs-identifier hs-var">input</span></a><span class="hs-operator hs-var">^.</span><a href="Graphics.Vty.Input.Loop.html#eventChannel"><span class="hs-identifier hs-var">eventChannel</span></a><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><a href="Graphics.Vty.Input.Events.html#EvResize"><span class="hs-identifier hs-var">EvResize</span></a><span> </span><a href="#local-6989586621679240892"><span class="hs-identifier hs-var">e</span></a><span> </span><a href="#local-6989586621679240892"><span class="hs-identifier hs-var">e</span></a><span class="hs-special">)</span><span>
+</span><a name="line-176"></a><span>    </span><span class="hs-identifier">_</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-identifier hs-var">installHandler</span><span> </span><span class="hs-identifier hs-var">windowChange</span><span> </span><a href="#local-6989586621679240574"><span class="hs-identifier hs-var">pokeIO</span></a><span> </span><span class="hs-identifier hs-var">Nothing</span><span>
+</span><a name="line-177"></a><span>    </span><span class="hs-identifier">_</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-identifier hs-var">installHandler</span><span> </span><span class="hs-identifier hs-var">continueProcess</span><span> </span><a href="#local-6989586621679240574"><span class="hs-identifier hs-var">pokeIO</span></a><span> </span><span class="hs-identifier hs-var">Nothing</span><span>
+</span><a name="line-178"></a><span>    </span><span class="hs-identifier hs-var">return</span><span> </span><span class="hs-operator hs-var">$</span><span> </span><a href="#local-6989586621679240573"><span class="hs-identifier hs-var">input</span></a><span>
+</span><a name="line-179"></a><span>        </span><span class="hs-special">{</span><span> </span><span class="hs-identifier">shutdownInput</span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><a name="line-180"></a><span>            </span><span class="hs-identifier">shutdownInput</span><span> </span><a href="#local-6989586621679240573"><span class="hs-identifier hs-var">input</span></a><span>
+</span><a name="line-181"></a><span>            </span><span class="hs-identifier">_</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-identifier hs-var">installHandler</span><span> </span><span class="hs-identifier hs-var">windowChange</span><span> </span><span class="hs-identifier hs-var">Ignore</span><span> </span><span class="hs-identifier hs-var">Nothing</span><span>
+</span><a name="line-182"></a><span>            </span><span class="hs-identifier">_</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="hs-identifier hs-var">installHandler</span><span> </span><span class="hs-identifier hs-var">continueProcess</span><span> </span><span class="hs-identifier hs-var">Ignore</span><span> </span><span class="hs-identifier hs-var">Nothing</span><span>
+</span><a name="line-183"></a><span>            </span><a href="#local-6989586621679240572"><span class="hs-identifier hs-var">unsetAttrs</span></a><span>
+</span><a name="line-184"></a><span>        </span><span class="hs-special">}</span><span>
+</span><a name="line-185"></a><span class="hs-identifier">inputForConfig</span><span> </span><a name="local-6989586621679240893"><a href="#local-6989586621679240893"><span class="hs-identifier">config</span></a></a><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-special">(</span><span class="hs-operator hs-var">&lt;&gt;</span><span> </span><a href="#local-6989586621679240893"><span class="hs-identifier hs-var">config</span></a><span class="hs-special">)</span><span> </span><span class="hs-operator hs-var">&lt;$&gt;</span><span> </span><a href="Graphics.Vty.Config.html#standardIOConfig"><span class="hs-identifier hs-var">standardIOConfig</span></a><span> </span><span class="hs-operator hs-var">&gt;&gt;=</span><span> </span><a href="Graphics.Vty.Input.html#inputForConfig"><span class="hs-identifier hs-var">inputForConfig</span></a><span>
+</span><a name="line-186"></a></pre></body></html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><a name="line-2"></a><span class="hs-pragma">{-# LANGUAGE TemplateHaskell #-}</span><span>
+</span><a name="line-3"></a><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><a name="line-4"></a><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><a name="line-5"></a><span class="hs-comment">-- | This module provides a basic text editor widget. You'll need to</span><span>
+</span><a name="line-6"></a><span class="hs-comment">-- embed an 'Editor' in your application state and transform it with</span><span>
+</span><a name="line-7"></a><span class="hs-comment">-- 'handleEvent' when relevant events arrive. To get the contents</span><span>
+</span><a name="line-8"></a><span class="hs-comment">-- of the editor, just use 'getEditContents'. To modify it, use the</span><span>
+</span><a name="line-9"></a><span class="hs-comment">-- 'Z.TextZipper' interface with 'applyEdit'.</span><span>
+</span><a name="line-10"></a><span class="hs-comment">--</span><span>
+</span><a name="line-11"></a><span class="hs-comment">-- The editor's 'handleEditorEvent' function handles a set of basic</span><span>
+</span><a name="line-12"></a><span class="hs-comment">-- input events that should suffice for most purposes; see the source</span><span>
+</span><a name="line-13"></a><span class="hs-comment">-- for a complete list.</span><span>
+</span><a name="line-14"></a><span class="hs-comment">--</span><span>
+</span><a name="line-15"></a><span class="hs-comment">-- Bear in mind that the editor provided by this module is intended to</span><span>
+</span><a name="line-16"></a><span class="hs-comment">-- provide basic input support for brick applications but it is not</span><span>
+</span><a name="line-17"></a><span class="hs-comment">-- intended to be a replacement for your favorite editor such as Vim or</span><span>
+</span><a name="line-18"></a><span class="hs-comment">-- Emacs. It is also not suitable for building sophisticated editors. If</span><span>
+</span><a name="line-19"></a><span class="hs-comment">-- you want to build your own editor, I suggest starting from scratch.</span><span>
+</span><a name="line-20"></a><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">Widgets</span><span class="hs-operator">.</span><span class="hs-identifier">Edit</span><span>
+</span><a name="line-21"></a><span>  </span><span class="hs-special">(</span><span> </span><a href="Brick.Widgets.Edit.html#Editor"><span class="hs-identifier hs-type">Editor</span></a><span class="hs-special">(</span><span class="hs-identifier">editContents</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">editorName</span><span class="hs-special">,</span><span> </span><span class="hs-identifier">editDrawContents</span><span class="hs-special">)</span><span>
+</span><a name="line-22"></a><span>  </span><span class="hs-comment">-- * Constructing an editor</span><span>
+</span><a name="line-23"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Edit.html#editor"><span class="hs-identifier hs-var">editor</span></a><span>
+</span><a name="line-24"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Edit.html#editorText"><span class="hs-identifier hs-var">editorText</span></a><span>
+</span><a name="line-25"></a><span>  </span><span class="hs-comment">-- * Reading editor contents</span><span>
+</span><a name="line-26"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Edit.html#getEditContents"><span class="hs-identifier hs-var">getEditContents</span></a><span>
+</span><a name="line-27"></a><span>  </span><span class="hs-comment">-- * Handling events</span><span>
+</span><a name="line-28"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Edit.html#handleEditorEvent"><span class="hs-identifier hs-var">handleEditorEvent</span></a><span>
+</span><a name="line-29"></a><span>  </span><span class="hs-comment">-- * Editing text</span><span>
+</span><a name="line-30"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Edit.html#applyEdit"><span class="hs-identifier hs-var">applyEdit</span></a><span>
+</span><a name="line-31"></a><span>  </span><span class="hs-comment">-- * Lenses for working with editors</span><span>
+</span><a name="line-32"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Edit.html#editContentsL"><span class="hs-identifier hs-var">editContentsL</span></a><span>
+</span><a name="line-33"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Edit.html#editDrawContentsL"><span class="hs-identifier hs-var">editDrawContentsL</span></a><span>
+</span><a name="line-34"></a><span>  </span><span class="hs-comment">-- * Rendering editors</span><span>
+</span><a name="line-35"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Edit.html#renderEditor"><span class="hs-identifier hs-var">renderEditor</span></a><span>
+</span><a name="line-36"></a><span>  </span><span class="hs-comment">-- * Attributes</span><span>
+</span><a name="line-37"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Edit.html#editAttr"><span class="hs-identifier hs-var">editAttr</span></a><span>
+</span><a name="line-38"></a><span>  </span><span class="hs-special">,</span><span> </span><a href="Brick.Widgets.Edit.html#editFocusedAttr"><span class="hs-identifier hs-var">editFocusedAttr</span></a><span>
+</span><a name="line-39"></a><span>  </span><span class="hs-special">)</span><span>
+</span><a name="line-40"></a><span class="hs-keyword">where</span><span>
+</span><a name="line-41"></a><span>
+</span><a name="line-42"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Data</span><span class="hs-operator">.</span><span class="hs-identifier">Monoid</span><span>
+</span><a name="line-43"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Lens</span><span class="hs-operator">.</span><span class="hs-identifier">Micro</span><span>
+</span><a name="line-44"></a><span class="hs-keyword">import</span><span> </span><span class="hs-identifier">Graphics</span><span class="hs-operator">.</span><span class="hs-identifier">Vty</span><span> </span><span class="hs-special">(</span><span class="hs-identifier hs-type">Event</span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Key</span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="hs-identifier hs-type">Modifier</span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><a name="line-45"></a><span>
+</span><a name="line-46"></a><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">Data</span><span class="hs-operator">.</span><span class="hs-identifier">Text</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">T</span><span>
+</span><a name="line-47"></a><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">Data</span><span class="hs-operator">.</span><span class="hs-identifier">Text</span><span class="hs-operator">.</span><span class="hs-identifier">Zipper</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">Z</span><span> </span><span class="hs-keyword">hiding</span><span> </span><span class="hs-special">(</span><span> </span><span class="hs-identifier hs-var">textZipper</span><span> </span><span class="hs-special">)</span><span>
+</span><a name="line-48"></a><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-identifier">Data</span><span class="hs-operator">.</span><span class="hs-identifier">Text</span><span class="hs-operator">.</span><span class="hs-identifier">Zipper</span><span class="hs-operator">.</span><span class="hs-identifier">Generic</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="hs-identifier">Z</span><span>
+</span><a name="line-49"></a><span>
+</span><a name="line-50"></a><span class="hs-keyword">import</span><span> </span><a href="Brick.Types.html"><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">Types</span></a><span>
+</span><a name="line-51"></a><span class="hs-keyword">import</span><span> </span><a href="Brick.Widgets.Core.html"><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">Widgets</span><span class="hs-operator">.</span><span class="hs-identifier">Core</span></a><span>
+</span><a name="line-52"></a><span class="hs-keyword">import</span><span> </span><a href="Brick.AttrMap.html"><span class="hs-identifier">Brick</span><span class="hs-operator">.</span><span class="hs-identifier">AttrMap</span></a><span>
+</span><a name="line-53"></a><span>
+</span><a name="line-54"></a><span class="hs-comment">-- | Editor state.  Editors support the following events by default:</span><span>
+</span><a name="line-55"></a><span class="hs-comment">--</span><span>
+</span><a name="line-56"></a><span class="hs-comment">-- * Ctrl-a: go to beginning of line</span><span>
+</span><a name="line-57"></a><span class="hs-comment">-- * Ctrl-e: go to end of line</span><span>
+</span><a name="line-58"></a><span class="hs-comment">-- * Ctrl-d, Del: delete character at cursor position</span><span>
+</span><a name="line-59"></a><span class="hs-comment">-- * Backspace: delete character prior to cursor position</span><span>
+</span><a name="line-60"></a><span class="hs-comment">-- * Ctrl-k: delete all from cursor to end of line</span><span>
+</span><a name="line-61"></a><span class="hs-comment">-- * Ctrl-u: delete all from cursor to beginning of line</span><span>
+</span><a name="line-62"></a><span class="hs-comment">-- * Arrow keys: move cursor</span><span>
+</span><a name="line-63"></a><span class="hs-comment">-- * Enter: break the current line at the cursor position</span><span>
+</span><a name="line-64"></a><span class="hs-keyword">data</span><span> </span><a name="Editor"><a href="Brick.Widgets.Edit.html#Editor"><span class="hs-identifier">Editor</span></a></a><span> </span><a name="local-6989586621679308953"><a href="#local-6989586621679308953"><span class="hs-identifier">t</span></a></a><span> </span><a name="local-6989586621679308954"><a href="#local-6989586621679308954"><span class="hs-identifier">n</span></a></a><span> </span><span class="hs-glyph">=</span><span>
+</span><a name="line-65"></a><span>    </span><a name="Editor"><a href="Brick.Widgets.Edit.html#Editor"><span class="hs-identifier">Editor</span></a></a><span> </span><span class="hs-special">{</span><span> </span><a name="editContents"><a href="Brick.Widgets.Edit.html#editContents"><span class="hs-identifier">editContents</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-identifier hs-type">Z</span><span class="hs-operator hs-type">.</span><span class="hs-identifier hs-type">TextZipper</span><span> </span><a href="#local-6989586621679308953"><span class="hs-identifier hs-type">t</span></a><span>
+</span><a name="line-66"></a><span>           </span><span class="hs-comment">-- ^ The contents of the editor</span><span>
+</span><a name="line-67"></a><span>           </span><span class="hs-special">,</span><span> </span><a name="editDrawContents"><a href="Brick.Widgets.Edit.html#editDrawContents"><span class="hs-identifier">editDrawContents</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><span class="hs-special">[</span><a href="#local-6989586621679308953"><span class="hs-identifier hs-type">t</span></a><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><a href="Brick.Types.html#Widget"><span class="hs-identifier hs-type">Widget</span></a><span> </span><a href="#local-6989586621679308954"><span class="hs-identifier hs-type">n</span></a><span>
+</span><a name="line-68"></a><span>           </span><span class="hs-comment">-- ^ The function the editor uses to draw its contents</span><span>
+</span><a name="line-69"></a><span>           </span><span class="hs-special">,</span><span> </span><a name="editorName"><a href="Brick.Widgets.Edit.html#editorName"><span class="hs-identifier">editorName</span></a></a><span> </span><span class="hs-glyph">::</span><span> </span><a href="#local-6989586621679308954"><span class="hs-identifier hs-type">n</span></a><span>
+</span><a name="line-70"></a><span>           </span><span class="hs-comment">-- ^ The name of the editor</span><span>
+</span><a name="line-71"></a><span>           </span><span class="hs-special">}</span><span>
+</span><a name="line-72"></a><span>
+</span><a name="line-73"></a><span class="hs-identifier hs-var">suffixLenses</span><span> </span><span class="hs-char">''Editor
+
+instance (Show t, Show n) =&gt; Show (Editor t n) where
+    show e =
+        concat [ &quot;Editor { &quot;
+               , &quot;editContents = &quot; &lt;&gt; show (editContents e)
+               , &quot;, editorName = &quot; &lt;&gt; show (editorName e)
+               , &quot;}&quot;
+               ]
+
+instance Named (Editor t n) n where
+    getName = editorName
+
+handleEditorEvent :: (Eq t, Monoid t) =&gt; Event -&gt; Editor t n -&gt; EventM n (Editor t n)
+handleEditorEvent e ed =
+        let f = case e of
+                  EvKey (KChar 'a') [MCtrl] -&gt; Z.gotoBOL
+                  EvKey (KChar 'e') [MCtrl] -&gt; Z.gotoEOL
+                  EvKey (KChar 'd') [MCtrl] -&gt; Z.deleteChar
+                  EvKey (KChar 'k') [MCtrl] -&gt; Z.killToEOL
+                  EvKey (KChar 'u') [MCtrl] -&gt; Z.killToBOL
+                  EvKey KEnter [] -&gt; Z.breakLine
+                  EvKey KDel [] -&gt; Z.deleteChar
+                  EvKey (KChar c) [] | c /= '\t' -&gt; Z.insertChar c
+                  EvKey KUp [] -&gt; Z.moveUp
+                  EvKey KDown [] -&gt; Z.moveDown
+                  EvKey KLeft [] -&gt; Z.moveLeft
+                  EvKey KRight [] -&gt; Z.moveRight
+                  EvKey KBS [] -&gt; Z.deletePrevChar
+                  _ -&gt; id
+        in return $ applyEdit f ed
+
+-- | Construct an editor over 'Text' values
+editorText :: n
+       -- ^ The editor's name (must be unique)
+       -&gt; ([T.Text] -&gt; Widget n)
+       -- ^ The content rendering function
+       -&gt; Maybe Int
+       -- ^ The limit on the number of lines in the editor ('Nothing'
+       -- means no limit)
+       -&gt; T.Text
+       -- ^ The initial content
+       -&gt; Editor T.Text n
+editorText = editor
+
+-- | Construct an editor over 'String' values
+editor :: Z.GenericTextZipper a
+       =&gt; n
+       -- ^ The editor's name (must be unique)
+       -&gt; ([a] -&gt; Widget n)
+       -- ^ The content rendering function
+       -&gt; Maybe Int
+       -- ^ The limit on the number of lines in the editor ('Nothing'
+       -- means no limit)
+       -&gt; a
+       -- ^ The initial content
+       -&gt; Editor a n
+editor name draw limit s = Editor (Z.textZipper (Z.lines s) limit) draw name
+
+-- | Apply an editing operation to the editor's contents. Bear in mind
+-- that you should only apply zipper operations that operate on the
+-- current line; the editor will only ever render the first line of
+-- text.
+applyEdit :: (Z.TextZipper t -&gt; Z.TextZipper t)
+          -- ^ The 'Data.Text.Zipper' editing transformation to apply
+          -&gt; Editor t n
+          -&gt; Editor t n
+applyEdit f e = e &amp; editContentsL %~ f
+
+-- | The attribute assigned to the editor when it does not have focus.
+editAttr :: AttrName
+editAttr = &quot;edit&quot;
+
+-- | The attribute assigned to the editor when it has focus. Extends
+-- 'editAttr'.
+editFocusedAttr :: AttrName
+editFocusedAttr = editAttr &lt;&gt; &quot;focused&quot;
+
+-- | Get the contents of the editor.
+getEditContents :: Monoid t =&gt; Editor t n -&gt; [t]
+getEditContents e = Z.getText $ e^.editContentsL
+
+-- | Turn an editor state value into a widget. This uses the editor's
+-- name for its scrollable viewport handle and the name is also used to
+-- report mouse events.
+renderEditor :: (Ord n, Show n, Monoid t, TextWidth t, Z.GenericTextZipper t)
+             =&gt; Bool
+             -- ^ Whether the editor has focus. It will report a cursor
+             -- position if and only if it has focus.
+             -&gt; Editor t n
+             -- ^ The editor.
+             -&gt; Widget n
+renderEditor foc e =
+    let cp = Z.cursorPosition z
+        z = e^.editContentsL
+        toLeft = Z.take (cp^._2) (Z.currentLine z)
+        cursorLoc = Location (textWidth toLeft, cp^._1)
+        limit = case e^.editContentsL.to Z.getLineLimit of
+            Nothing -&gt; id
+            Just lim -&gt; vLimit lim
+        atChar = charAtCursor $ e^.editContentsL
+        atCharWidth = maybe 1 textWidth atChar
+    in withAttr (if foc then editFocusedAttr else editAttr) $
+       limit $
+       viewport (e^.editorNameL) Both $
+       clickable (e^.editorNameL) $
+       (if foc then showCursor (e^.editorNameL) cursorLoc else id) $
+       visibleRegion cursorLoc (atCharWidth, 1) $
+       e^.editDrawContentsL $
+       getEditContents e
+
+charAtCursor :: (Z.GenericTextZipper t) =&gt; Z.TextZipper t -&gt; Maybe t
+charAtCursor z =
+    let col = snd $ Z.cursorPosition z
+        curLine = Z.currentLine z
+        toRight = Z.drop col curLine
+    in if Z.length toRight &gt; 0
+       then Just $ Z.take 1 toRight
+       else Nothing
+</span></pre></body></html>
