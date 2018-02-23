@@ -38,6 +38,7 @@ library:
 executables:
   vty-test:
     main:                VtyTest.hs
+    source-dirs:         app
   pong:
     main:                Main.hs
     source-dirs:         app
