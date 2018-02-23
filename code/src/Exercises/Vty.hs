@@ -61,15 +61,26 @@ renderVtyImage image = bracket startVty shutdown drawImage
 -- 'renderVtyImage' 'plainHelloWorld'
 -- @
 plainHelloWorld :: Image
-plainHelloWorld = undefined
+plainHelloWorld = string defAttr "Hello World"
 
+
+
+
+
+
+
+
+
+
+  
+  
 -- | Print "Hello World" in red on blue
 --
 -- @
 -- 'renderVtyImage' 'colorfulHelloWorld'
 -- @
 colorfulHelloWorld :: Image
-colorfulHelloWorld = undefined
+colorfulHelloWorld = string (defAttr `withForeColor` red `withBackColor` blue) "Hello World"
 
 -- | Print a list with "Item 1", "Item 2", ..., "Item 10", where the first item
 -- is in 'standout' (reverse video) style.
@@ -78,7 +89,7 @@ colorfulHelloWorld = undefined
 -- 'renderVtyImage' 'staticVtyList'
 -- @
 staticVtyList :: Image
-staticVtyList = undefined
+staticVtyList = vertCat (string (defAttr `withStyle` standout) first : fmap (string defAttr) rest)
   where
     first : rest = fmap (("Item " ++) . show) [1..10 :: Int]
 
@@ -116,8 +127,16 @@ runVtyApp app initialState = bracket startVty shutdown (eventLoop initialState)
 -- @
 vtyListApp :: MiniApp ([String], Int)
 vtyListApp = MiniApp
-    { appRender = undefined
-    , appHandle = undefined
+    { appRender = \(items, selectedIndex) ->
+        let (pre, sel, post) = split3 selectedIndex items
+        in  vertCat (fmap (string defAttr) pre)
+                <-> string (defAttr `withStyle` standout) sel
+                <-> vertCat (fmap (string defAttr) post)
+    , appHandle = \event (items, selectedIndex) -> case event of
+        EvKey KUp []   -> Just (items, selectedIndex - 1)
+        EvKey KDown [] -> Just (items, selectedIndex + 1)
+        EvKey KEsc []  -> Nothing
+        _otherwise     -> Just (items, selectedIndex)
     }
   where
     split3 :: Int -> [a] -> ([a], a, [a])

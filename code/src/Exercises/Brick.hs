@@ -141,10 +141,13 @@ runSimpleBrickApp simpleApp initialState = defaultMain app initialState
 -- @
 brickListApp :: (Ord n, Show n) => SimpleApp (List n String) n
 brickListApp = SimpleApp
-    { simpleAppDraw = \state -> undefined
-    , simpleAppHandleEvent = \state event -> undefined
-    , simpleAppAttrMap = \state -> undefined
-    }
+    { simpleAppDraw = \s -> [center (renderList (\_isSelected item -> str item) True s)]
+    , simpleAppHandleEvent = \s -> \case
+        VtyEvent (EvKey KEnter []) -> halt s
+        VtyEvent e -> handleListEvent e s >>= continue
+        _ -> continue s
+    , simpleAppAttrMap = \_s -> attrMap defAttr
+        [ (listSelectedAttr, defAttr `withStyle` standout) ] }
 
 brickListAppState :: List String String
 brickListAppState = list "myList" (fmap (("Item " ++) . show) (Vector.fromList [1..10 :: Int])) 0
@@ -162,13 +165,17 @@ brickListAppState = list "myList" (fmap (("Item " ++) . show) (Vector.fromList [
 -- @
 dialogApp :: SimpleApp (Dialog Bool) ()
 dialogApp = SimpleApp
-    { simpleAppDraw = \state -> undefined
-    , simpleAppHandleEvent = \state event -> undefined
-    , simpleAppAttrMap = \state -> undefined
-    }
+    { simpleAppDraw = \s -> [renderDialog s (hCenter (padAll 1 (str "Yes or No?")))]
+    , simpleAppHandleEvent = \s -> \case
+        VtyEvent (EvKey KEnter []) -> halt s
+        VtyEvent e                 -> handleDialogEvent e s >>= continue
+        _otherwise                 -> continue s
+    , simpleAppAttrMap = \_s -> attrMap defAttr
+        [ (dialogAttr, defAttr `withStyle` standout)
+        , (buttonSelectedAttr, currentAttr `withForeColor` red) ] }
 
 yesNoDialog :: Dialog Bool
-yesNoDialog = undefined
+yesNoDialog = dialog (Just "Example") (Just (0, [("Yes", True), ("No", False)])) 40
 
 -- | Define your own 'Widget'.
 --
@@ -183,10 +190,10 @@ yesNoDialog = undefined
 -- @
 renderPongPaddle :: (Int, Int) -> Widget n
 renderPongPaddle (paddleTop, paddleHeight) = Widget
-    { hSize = undefined
-    , vSize = undefined
+    { hSize = Fixed
+    , vSize = Greedy
     , render = pure emptyResult
-        { image = undefined } }
+        { image = translateY paddleTop (charFill defAttr '#' 1 paddleHeight) } }
 
 -- | Integrate the pong paddle widget into an app.
 --
@@ -198,6 +205,10 @@ renderPongPaddle (paddleTop, paddleHeight) = Widget
 -- @
 pongPaddleApp :: SimpleApp (Int, Int) ()
 pongPaddleApp = SimpleApp
-    { simpleAppDraw = \state -> undefined
-    , simpleAppHandleEvent = \(paddleTop, paddleHeight) -> undefined
-    , simpleAppAttrMap = \state -> attrMap defAttr [] }
+    { simpleAppDraw = \s -> [renderPongPaddle s]
+    , simpleAppHandleEvent = \(paddleTop, paddleHeight) -> \case
+        VtyEvent (EvKey KUp [])   -> continue (paddleTop - 1, paddleHeight)
+        VtyEvent (EvKey KDown []) -> continue (paddleTop + 1, paddleHeight)
+        VtyEvent (EvKey KEsc [])  -> halt (paddleTop, paddleHeight)
+        _otherwise                -> continue (paddleTop, paddleHeight)
+    , simpleAppAttrMap = \_s -> attrMap defAttr [] }
